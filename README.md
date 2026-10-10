@@ -44,7 +44,7 @@
 | --- | --- | --- |
 | <img src="docs/screenshots/callkit.png" width="240"> | <img src="docs/screenshots/history.png" width="240"> | <img src="docs/screenshots/sms.png" width="240"> |
 
-| 设置（主题 / 功能 / 服务器连接） |
+| 设置 |
 | --- |
 | <img src="docs/screenshots/settings.png" width="240"> |
 

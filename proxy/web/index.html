@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DJOneHub">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="manifest" href="/manifest.json">
+<title>DJOneHub Remote</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0a;--card:#1c1c1e;--card2:#2c2c2e;--accent:#007aff;--green:#34c759;--red:#ff3b30;--orange:#ff9500;--text:#fff;--text2:#999;--radius:16px;--safe-top:env(safe-area-inset-top,20px);--safe-bottom:env(safe-area-inset-bottom,20px)}
+html,body{height:100%;font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;-webkit-user-select:none;user-select:none}
+.app{display:flex;flex-direction:column;height:100%;padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
+.header{padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header h1{font-size:17px;font-weight:600}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:8px;flex-shrink:0}
+.status-dot.online{background:var(--green)}
+.status-bar{display:flex;align-items:center;font-size:13px;color:var(--text2)}
+.main{flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px}
+
+/* 通话状态卡片 */
+.call-card{background:var(--card);border-radius:var(--radius);padding:20px;display:none}
+.call-card.visible{display:block}
+.call-info{text-align:center;margin-bottom:16px}
+.call-number{font-size:32px;font-weight:300;letter-spacing:1px;margin-bottom:4px}
+.call-state{font-size:15px;color:var(--text2)}
+.call-timer{font-size:15px;color:var(--green);margin-top:4px}
+.call-actions{display:flex;justify-content:center;gap:24px;margin-top:16px}
+
+/* 通话控制按钮 */
+.call-btn{width:64px;height:64px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .1s}
+.call-btn:active{transform:scale(.9)}
+.call-btn svg{width:28px;height:28px;fill:#fff}
+.call-btn.answer{background:var(--green)}
+.call-btn.reject{background:var(--red)}
+.call-btn.hangup{background:var(--red)}
+.call-btn.mute{background:var(--card2)}
+.call-btn.mute.active{background:var(--orange)}
+.call-btn.keypad{background:var(--card2)}
+
+/* 拨号盘 */
+.dial-pad{background:var(--card);border-radius:var(--radius);padding:20px}
+.dial-display{background:var(--card2);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;min-height:56px;display:flex;align-items:center;justify-content:center}
+.dial-number{font-size:28px;font-weight:300;letter-spacing:2px;word-break:break-all}
+.dial-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.dial-key{height:56px;border-radius:12px;background:var(--card2);border:none;color:var(--text);font-size:24px;font-weight:300;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .1s;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dial-key:active{background:#3a3a3c}
+.dial-key .sub{font-size:10px;color:var(--text2);letter-spacing:2px;margin-top:-2px}
+.dial-actions{display:flex;gap:12px;margin-top:16px;justify-content:center}
+.dial-call-btn{width:64px;height:64px;border-radius:50%;background:var(--green);border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;transition:transform .1s}
+.dial-call-btn:active{transform:scale(.9)}
+.dial-call-btn svg{width:28px;height:28px;fill:#fff}
+.dial-del{width:48px;height:48px;border-radius:50%;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:8px}
+.dial-del svg{width:24px;height:24px;fill:var(--text2)}
+
+/* 模块信息 */
+.module-info{background:var(--card);border-radius:var(--radius);padding:16px}
+.module-info h3{font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.info-item{background:var(--card2);border-radius:10px;padding:10px 12px}
+.info-label{font-size:11px;color:var(--text2)}
+.info-value{font-size:15px;font-weight:500;margin-top:2px}
+
+/* 通话记录 */
+.history{background:var(--card);border-radius:var(--radius);padding:16px}
+.history h3{font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.history-item{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--card2)}
+.history-item:last-child{border:none}
+.history-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:12px;flex-shrink:0}
+.history-icon.outgoing{background:rgba(0,122,255,.15)}
+.history-icon.incoming{background:rgba(52,199,89,.15)}
+.history-icon.missed{background:rgba(255,59,48,.15)}
+.history-icon svg{width:16px;height:16px}
+.history-detail{flex:1;min-width:0}
+.history-name{font-size:15px;font-weight:500}
+.history-time{font-size:12px;color:var(--text2);margin-top:2px}
+.history-dial{width:32px;height:32px;border-radius:50%;background:var(--card2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.history-dial svg{width:16px;height:16px;fill:var(--accent)}
+
+/* DTMF 键盘覆盖 */
+.dtmf-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.dtmf-overlay.visible{display:flex}
+.dtmf-panel{background:var(--card);border-radius:20px 20px 0 0;padding:20px;padding-bottom:calc(20px + var(--safe-bottom));width:100%;max-width:400px}
+.dtmf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dtmf-key{height:52px;border-radius:12px;background:var(--card2);border:none;color:var(--text);font-size:22px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.dtmf-key:active{background:#3a3a3c}
+.dtmf-close{width:100%;margin-top:12px;padding:12px;border-radius:12px;background:var(--card2);border:none;color:var(--accent);font-size:16px;cursor:pointer}
+
+/* 动画 */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulsing{animation:pulse 1.5s infinite}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>📞 DJOneHub</h1>
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">连接中…</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- 通话状态 -->
+    <div class="call-card" id="callCard">
+      <div class="call-info">
+        <div class="call-number" id="callNumber">—</div>
+        <div class="call-state" id="callState">—</div>
+        <div class="call-timer" id="callTimer"></div>
+      </div>
+      <div class="call-actions" id="callActions"></div>
+    </div>
+
+    <!-- 拨号盘 -->
+    <div class="dial-pad">
+      <div class="dial-display">
+        <div class="dial-number" id="dialDisplay">&nbsp;</div>
+      </div>
+      <div class="dial-grid" id="dialGrid"></div>
+      <div class="dial-actions">
+        <div style="width:64px"></div>
+        <button class="dial-call-btn" id="dialBtn" onclick="doDial()">
+          <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1v3.49a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.2 2.2z"/></svg>
+        </button>
+        <button class="dial-del" id="delBtn" onclick="doDelete()">
+          <svg viewBox="0 0 24 24"><path d="M22 3H7a2 2 0 00-2 2v14a2 2 0 002 2h15V3zm-4.59 12L14 11.59 10.59 15 9 13.41 12.41 10 9 6.59 10.59 5 14 8.41 17.41 5 19 6.59 15.59 10 19 13.41 17.41 15z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 模块信息 -->
+    <div class="module-info">
+      <h3>模块状态</h3>
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">运营商</div><div class="info-value" id="infoOperator">—</div></div>
+        <div class="info-item"><div class="info-label">信号</div><div class="info-value" id="infoSignal">—</div></div>
+        <div class="info-item"><div class="info-label">网络</div><div class="info-value" id="infoNetwork">—</div></div>
+        <div class="info-item"><div class="info-label">SIM</div><div class="info-value" id="infoSIM">—</div></div>
+      </div>
+    </div>
+
+    <!-- 通话记录 -->
+    <div class="history">
+      <h3>通话记录</h3>
+      <div id="historyList"><div style="color:var(--text2);font-size:14px;text-align:center;padding:20px">暂无通话记录</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DTMF覆盖层 -->
+<div class="dtmf-overlay" id="dtmfOverlay">
+  <div class="dtmf-panel">
+    <div class="dtmf-grid" id="dtmfGrid"></div>
+    <button class="dtmf-close" onclick="closeDTMF()">关闭</button>
+  </div>
+</div>
+
+<script>
+const DIAL_KEYS=['1','2','3','4','5','6','7','8','9','*','0','#'];
+const DIAL_SUB=['','','ABC','DEF','GHI','JKL','MNO','PQRS','TUV','','+','WXYZ'];
+const CALL_STATES={incoming:'来电',waiting:'等待',dialing:'拨号中',alerting:'振铃中',active:'通话中',held:'保持中'};
+
+let dialNumber='';
+let callStartTime=null;
+let timerInterval=null;
+let isMuted=false;
+let pollTimer=null;
+
+// 初始化拨号盘
+function initDialPad(){
+  const grid=document.getElementById('dialGrid');
+  DIAL_KEYS.forEach((k,i)=>{
+    const btn=document.createElement('button');
+    btn.className='dial-key';
+    btn.innerHTML=`${k}${DIAL_SUB[i]?`<span class="sub">${DIAL_SUB[i]}</span>`:''}`;
+    btn.onclick=()=>addDigit(k);
+    btn.onpointerdown=()=>playTone(k);
+    grid.appendChild(btn);
+  });
+}
+
+// 初始化DTMF键盘
+function initDTMF(){
+  const grid=document.getElementById('dtmfGrid');
+  DIAL_KEYS.forEach(k=>{
+    const btn=document.createElement('button');
+    btn.className='dtmf-key';
+    btn.textContent=k;
+    btn.onclick=()=>sendDTMF(k);
+    grid.appendChild(btn);
+  });
+}
+
+function addDigit(d){
+  dialNumber+=d;
+  updateDialDisplay();
+}
+
+function doDelete(){
+  dialNumber=dialNumber.slice(0,-1);
+  updateDialDisplay();
+}
+
+function updateDialDisplay(){
+  const el=document.getElementById('dialDisplay');
+  el.textContent=dialNumber||'\u00a0';
+  el.style.fontSize=dialNumber.length>12?'20px':dialNumber.length>8?'24px':'28px';
+}
+
+function playTone(k){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value={1:697,2:697,3:697,4:770,5:770,6:770,7:852,8:852,9:852,'*':941,0:941,'#':941}[k];
+    gain.gain.value=0.1;
+    osc.start();osc.stop(ctx.currentTime+0.1);
+  }catch(e){}
+}
+
+// API调用
+async function apiCall(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch('/api'+path,opts);
+  return r.json();
+}
+
+async function doDial(){
+  if(!dialNumber)return;
+  try{
+    await apiCall('POST','/calls/dial',{number:dialNumber});
+    dialNumber='';updateDialDisplay();
+  }catch(e){alert('拨号失败: '+e.message)}
+}
+
+async function doAnswer(){
+  try{await apiCall('POST','/calls/answer')}catch(e){alert('接听失败: '+e.message)}
+}
+
+async function doHangup(){
+  try{await apiCall('POST','/calls/hangup')}catch(e){alert('挂断失败: '+e.message)}
+}
+
+async function doReject(){
+  try{await apiCall('POST','/calls/reject')}catch(e){alert('拒接失败: '+e.message)}
+}
+
+async function sendDTMF(digit){
+  try{await apiCall('POST','/calls/dtmf',{digit})}catch(e){alert('DTMF失败: '+e.message)}
+}
+
+function openDTMF(){document.getElementById('dtmfOverlay').classList.add('visible')}
+function closeDTMF(){document.getElementById('dtmfOverlay').classList.remove('visible')}
+
+async function toggleMute(){
+  isMuted=!isMuted;
+  try{await apiCall('POST','/calls/audio/mute',{muted:isMuted})}catch(e){}
+  updateCallUI();
+}
+
+// 轮询状态
+async function pollStatus(){
+  try{
+    const [callData,statusData]=await Promise.all([
+      apiCall('GET','/calls/status'),
+      apiCall('GET','/status')
+    ]);
+    document.getElementById('statusDot').classList.add('online');
+    document.getElementById('statusText').textContent=statusData.operator||'已连接';
+    updateModuleInfo(statusData);
+    updateCallCard(callData);
+    updateHistory(callData.history||[]);
+  }catch(e){
+    document.getElementById('statusDot').classList.remove('online');
+    document.getElementById('statusText').textContent='连接失败';
+  }
+}
+
+function updateModuleInfo(s){
+  document.getElementById('infoOperator').textContent=s.operator||'—';
+  document.getElementById('infoSignal').textContent=s.signal_dbm?s.signal_dbm+' dBm':'—';
+  document.getElementById('infoNetwork').textContent=(s.network_mode||'—')+(s.network_duplex?' '+s.network_duplex:'');
+  document.getElementById('infoSIM').textContent=s.sim_inserted?'已插入':'未插入';
+}
+
+function updateCallCard(data){
+  const card=document.getElementById('callCard');
+  const call=data.active;
+  if(!call){
+    card.classList.remove('visible');
+    stopTimer();
+    return;
+  }
+  card.classList.add('visible');
+  document.getElementById('callNumber').textContent=formatNumber(call.number);
+  document.getElementById('callState').textContent=CALL_STATES[call.state]||call.state;
+
+  if(call.state==='active'){
+    if(!callStartTime)startTimer(call.started_at);
+  }else{
+    stopTimer();
+    document.getElementById('callTimer').textContent='';
+  }
+
+  const actions=document.getElementById('callActions');
+  actions.innerHTML='';
+  if(call.state==='incoming'||call.state==='waiting'){
+    actions.innerHTML=`
+      <button class="call-btn answer" onclick="doAnswer()"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1v3.49a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.2 2.2z"/></svg></button>
+      <button class="call-btn reject" onclick="doReject()"><svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28a11.27 11.27 0 00-2.67-1.85.996.996 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>`;
+  }else if(call.state==='active'||call.state==='dialing'||call.state==='alerting'){
+    actions.innerHTML=`
+      <button class="call-btn mute ${isMuted?'active':''}" onclick="toggleMute()"><svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5a3 3 0 00-6 0v.18l6 6zM4.27 3L3 4.27l6.01 6.01V11a3 3 0 004.73 2.43l1.57 1.57A5.01 5.01 0 017 11V5c0-.63.08-1.24.23-1.82L4.27 3zM19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28z"/></svg></button>
+      <button class="call-btn keypad" onclick="openDTMF()"><svg viewBox="0 0 24 24"><path d="M12 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM6 1c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12-8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-6 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg></button>
+      <button class="call-btn hangup" onclick="doHangup()"><svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28a11.27 11.27 0 00-2.67-1.85.996.996 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>`;
+  }
+}
+
+function startTimer(ts){
+  callStartTime=new Date(ts);
+  if(timerInterval)clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    if(!callStartTime)return;
+    const s=Math.floor((Date.now()-callStartTime)/1000);
+    const m=Math.floor(s/60);
+    const ss=s%60;
+    document.getElementById('callTimer').textContent=
+      `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+  },500);
+}
+
+function stopTimer(){
+  callStartTime=null;
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null}
+}
+
+function updateHistory(history){
+  const el=document.getElementById('historyList');
+  if(!history.length){
+    el.innerHTML='<div style="color:var(--text2);font-size:14px;text-align:center;padding:20px">暂无通话记录</div>';
+    return;
+  }
+  el.innerHTML=history.slice(0,20).map(h=>{
+    const isOut=h.direction==='outgoing';
+    const isMissed=h.missed;
+    const cls=isMissed?'missed':isOut?'outgoing':'incoming';
+    const icon=isMissed?'<path d="M19.59 7L12 14.59 6.41 9H11V7H3v8h2v-4.59l7 7 9-9z" fill="#ff3b30"/>':
+      isOut?'<path d="M9 5v2h6.59L4 18.59 5.41 20 17 8.41V15h2V5z" fill="#007aff"/>':
+      '<path d="M20 5.41L18.59 4 7 15.59V9H5v10h10v-2H8.41z" fill="#34c759"/>';
+    const time=new Date(h.started_at).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="history-item">
+      <div class="history-icon ${cls}"><svg viewBox="0 0 24 24">${icon}</svg></div>
+      <div class="history-detail">
+        <div class="history-name">${formatNumber(h.number)||'未知号码'}</div>
+        <div class="history-time">${time}${isMissed?' · 未接':''}</div>
+      </div>
+      <button class="history-dial" onclick="dialFromHistory('${h.number}')"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1v3.49a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.2 2.2z"/></svg></button>
+    </div>`;
+  }).join('');
+}
+
+function formatNumber(n){
+  if(!n)return '';
+  n=n.replace(/\s/g,'');
+  if(n.length===11&&n.startsWith('1'))return n.slice(0,3)+' '+n.slice(3,7)+' '+n.slice(7);
+  return n;
+}
+
+function dialFromHistory(n){
+  if(!n)return;
+  dialNumber=n;
+  updateDialDisplay();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// 初始化
+initDialPad();
+initDTMF();
+pollStatus();
+pollTimer=setInterval(pollStatus,2000);
+</script>
+</body>
+</html>

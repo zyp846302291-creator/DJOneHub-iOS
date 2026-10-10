@@ -1,0 +1,427 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		04DA8A40990EEE815F8B1219 /* AdaptiveColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5A0071FE3E2B9CE11BDB3B /* AdaptiveColors.swift */; };
+		053A07B7357A6343E89389C6 /* ContactManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F7FE9B0529326B1F9D42A6 /* ContactManager.swift */; };
+		170AD34A90ABEDC570D78F52 /* AudioReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 036F8184B3D5481B3E39CE2B /* AudioReceiver.swift */; };
+		2B2A01FCA1C578961CB76A1F /* SMSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D13EA7BD9A36828C0488EA2E /* SMSView.swift */; };
+		2E8D79D67DB95C3274529418 /* OverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42457576EB609CE04F5EB0FD /* OverviewView.swift */; };
+		48864EB764216543D326BC70 /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEA77D9D6682E2BA16B83F4 /* MoreView.swift */; };
+		597AD23434039ABEF0BAF5A6 /* SafeAudioTap.m in Sources */ = {isa = PBXBuildFile; fileRef = B57CB252854FE6EEC179E019 /* SafeAudioTap.m */; };
+		60025B73FF4DD1CD330AEBE2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35C36336546325CD84E674FC /* ContentView.swift */; };
+		6BF018DA67BE349F7B4E2E47 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DD9192B2A69367DE571FDA9 /* APIClient.swift */; };
+		6E816ADBF9DD581C1145BDAC /* CallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FE507CABFC65269D7BF6DE /* CallManager.swift */; };
+		7DE44258B72AD05B7C0182CF /* SignalingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF240C79D20E398740386E55 /* SignalingClient.swift */; };
+		847C00E0A43BAB4CDA231EEC /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D27F65A26CDF37C76C6D9E4A /* ContactsView.swift */; };
+		AA0E4D66C879243DB11BF7CE /* BackgroundKeepAlive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9316B8F643FBF68BCD5FCBBB /* BackgroundKeepAlive.swift */; };
+		B1BC8E6CC85B751A051688E6 /* DJOneHubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C84B6B8D45569D717C34DDF /* DJOneHubApp.swift */; };
+		DC912FE7679B3CF1378309FD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A93FA0D7F5F0FFA11C73ACC0 /* Assets.xcassets */; };
+		E0FB4726FF8F461357F34947 /* PushKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA63BAFB29DEED98FC566336 /* PushKitManager.swift */; };
+		F73185E32D7FC71AEF6C718E /* CallKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741D986D83E15BDD0BFBA7D9 /* CallKitManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		036F8184B3D5481B3E39CE2B /* AudioReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioReceiver.swift; sourceTree = "<group>"; };
+		35C36336546325CD84E674FC /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		38049060F5A35836D2250265 /* SafeAudioTap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SafeAudioTap.h; sourceTree = "<group>"; };
+		3C84B6B8D45569D717C34DDF /* DJOneHubApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DJOneHubApp.swift; sourceTree = "<group>"; };
+		3DD9192B2A69367DE571FDA9 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		42457576EB609CE04F5EB0FD /* OverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewView.swift; sourceTree = "<group>"; };
+		44F7FE9B0529326B1F9D42A6 /* ContactManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactManager.swift; sourceTree = "<group>"; };
+		4F5A0071FE3E2B9CE11BDB3B /* AdaptiveColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveColors.swift; sourceTree = "<group>"; };
+		741D986D83E15BDD0BFBA7D9 /* CallKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallKitManager.swift; sourceTree = "<group>"; };
+		9316B8F643FBF68BCD5FCBBB /* BackgroundKeepAlive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundKeepAlive.swift; sourceTree = "<group>"; };
+		A750E5D31CD9A8C685C67C50 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A93FA0D7F5F0FFA11C73ACC0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B145446D53E8C0C0B9415EA7 /* DJOneHub.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DJOneHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B57CB252854FE6EEC179E019 /* SafeAudioTap.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SafeAudioTap.m; sourceTree = "<group>"; };
+		D13EA7BD9A36828C0488EA2E /* SMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSView.swift; sourceTree = "<group>"; };
+		D27F65A26CDF37C76C6D9E4A /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
+		D3FE507CABFC65269D7BF6DE /* CallManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallManager.swift; sourceTree = "<group>"; };
+		DA63BAFB29DEED98FC566336 /* PushKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushKitManager.swift; sourceTree = "<group>"; };
+		DBEA77D9D6682E2BA16B83F4 /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreView.swift; sourceTree = "<group>"; };
+		DF240C79D20E398740386E55 /* SignalingClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalingClient.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		039208754C395B5DCBAC648E /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				4F5A0071FE3E2B9CE11BDB3B /* AdaptiveColors.swift */,
+				D27F65A26CDF37C76C6D9E4A /* ContactsView.swift */,
+				35C36336546325CD84E674FC /* ContentView.swift */,
+				DBEA77D9D6682E2BA16B83F4 /* MoreView.swift */,
+				42457576EB609CE04F5EB0FD /* OverviewView.swift */,
+				D13EA7BD9A36828C0488EA2E /* SMSView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		252C22C40A15D2D81876086D /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				3DD9192B2A69367DE571FDA9 /* APIClient.swift */,
+				DF240C79D20E398740386E55 /* SignalingClient.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		26BB4B82F6AD6F5EEA726D51 /* Push */ = {
+			isa = PBXGroup;
+			children = (
+				DA63BAFB29DEED98FC566336 /* PushKitManager.swift */,
+			);
+			path = Push;
+			sourceTree = "<group>";
+		};
+		4D2A58C976AD82C16FB4D6FB /* Call */ = {
+			isa = PBXGroup;
+			children = (
+				741D986D83E15BDD0BFBA7D9 /* CallKitManager.swift */,
+				D3FE507CABFC65269D7BF6DE /* CallManager.swift */,
+			);
+			path = Call;
+			sourceTree = "<group>";
+		};
+		5872E47515FF5D1A8B9A9EE0 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				44F7FE9B0529326B1F9D42A6 /* ContactManager.swift */,
+				3C84B6B8D45569D717C34DDF /* DJOneHubApp.swift */,
+				FAC576AF18559FD53D456307 /* Audio */,
+				4D2A58C976AD82C16FB4D6FB /* Call */,
+				252C22C40A15D2D81876086D /* Network */,
+				26BB4B82F6AD6F5EEA726D51 /* Push */,
+				039208754C395B5DCBAC648E /* UI */,
+			);
+			name = Source;
+			path = DJOneHub/Source;
+			sourceTree = "<group>";
+		};
+		64C8E01ECB671E2C1A85CF17 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B145446D53E8C0C0B9415EA7 /* DJOneHub.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B2A8E2A4501A652E3F9BA22C /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A93FA0D7F5F0FFA11C73ACC0 /* Assets.xcassets */,
+				A750E5D31CD9A8C685C67C50 /* Info.plist */,
+			);
+			name = Resources;
+			path = DJOneHub/Resources;
+			sourceTree = "<group>";
+		};
+		F231965537D34D866B6BE94E = {
+			isa = PBXGroup;
+			children = (
+				B2A8E2A4501A652E3F9BA22C /* Resources */,
+				5872E47515FF5D1A8B9A9EE0 /* Source */,
+				64C8E01ECB671E2C1A85CF17 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FAC576AF18559FD53D456307 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				036F8184B3D5481B3E39CE2B /* AudioReceiver.swift */,
+				9316B8F643FBF68BCD5FCBBB /* BackgroundKeepAlive.swift */,
+				38049060F5A35836D2250265 /* SafeAudioTap.h */,
+				B57CB252854FE6EEC179E019 /* SafeAudioTap.m */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FE924BF63EBC4A04BC145B81 /* DJOneHub */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EAFC7942904F4E99023E5733 /* Build configuration list for PBXNativeTarget "DJOneHub" */;
+			buildPhases = (
+				46D3B6FB16F679BB3EEB78F2 /* Sources */,
+				4F7DFE0EB4AE5AB6CFC1C630 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DJOneHub;
+			packageProductDependencies = (
+			);
+			productName = DJOneHub;
+			productReference = B145446D53E8C0C0B9415EA7 /* DJOneHub.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6199DFDC6840E7356CF94341 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					FE924BF63EBC4A04BC145B81 = {
+						DevelopmentTeam = 66LH6ZAB6R;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 0FB35F1A6D054B6AE85ACEC0 /* Build configuration list for PBXProject "DJOneHub" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F231965537D34D866B6BE94E;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 64C8E01ECB671E2C1A85CF17 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FE924BF63EBC4A04BC145B81 /* DJOneHub */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4F7DFE0EB4AE5AB6CFC1C630 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DC912FE7679B3CF1378309FD /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		46D3B6FB16F679BB3EEB78F2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6BF018DA67BE349F7B4E2E47 /* APIClient.swift in Sources */,
+				04DA8A40990EEE815F8B1219 /* AdaptiveColors.swift in Sources */,
+				170AD34A90ABEDC570D78F52 /* AudioReceiver.swift in Sources */,
+				AA0E4D66C879243DB11BF7CE /* BackgroundKeepAlive.swift in Sources */,
+				F73185E32D7FC71AEF6C718E /* CallKitManager.swift in Sources */,
+				6E816ADBF9DD581C1145BDAC /* CallManager.swift in Sources */,
+				053A07B7357A6343E89389C6 /* ContactManager.swift in Sources */,
+				847C00E0A43BAB4CDA231EEC /* ContactsView.swift in Sources */,
+				60025B73FF4DD1CD330AEBE2 /* ContentView.swift in Sources */,
+				B1BC8E6CC85B751A051688E6 /* DJOneHubApp.swift in Sources */,
+				48864EB764216543D326BC70 /* MoreView.swift in Sources */,
+				2E8D79D67DB95C3274529418 /* OverviewView.swift in Sources */,
+				E0FB4726FF8F461357F34947 /* PushKitManager.swift in Sources */,
+				2B2A01FCA1C578961CB76A1F /* SMSView.swift in Sources */,
+				597AD23434039ABEF0BAF5A6 /* SafeAudioTap.m in Sources */,
+				7DE44258B72AD05B7C0182CF /* SignalingClient.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0A91BF78C50937ECDFF9D68F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = DJOneHub/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.djonehub.remote;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		3F1B4C031E1487221021288B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 66LH6ZAB6R;
+				INFOPLIST_FILE = DJOneHub/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.djonehub.remote;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = DJOneHub/BridgingHeader.h;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A2D4BE2C2A3CF537801DC1F5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 66LH6ZAB6R;
+				INFOPLIST_FILE = DJOneHub/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.djonehub.remote;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = DJOneHub/BridgingHeader.h;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C3DA1BFA45D0770312B7641A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = DJOneHub/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.djonehub.remote;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0FB35F1A6D054B6AE85ACEC0 /* Build configuration list for PBXProject "DJOneHub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3DA1BFA45D0770312B7641A /* Debug */,
+				0A91BF78C50937ECDFF9D68F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EAFC7942904F4E99023E5733 /* Build configuration list for PBXNativeTarget "DJOneHub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A2D4BE2C2A3CF537801DC1F5 /* Debug */,
+				3F1B4C031E1487221021288B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 6199DFDC6840E7356CF94341 /* Project object */;
+}

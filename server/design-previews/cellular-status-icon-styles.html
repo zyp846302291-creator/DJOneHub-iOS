@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DJOneHub · 4G 状态栏图标方案</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #15171a;
+      color: #f5f5f7;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+    main { width: min(860px, 100%); }
+    h1 { margin: 0; font-size: 28px; letter-spacing: -.6px; }
+    .intro { margin: 9px 0 25px; color: #a1a1a6; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    article { overflow: hidden; border: 1px solid #3a3a3c; border-radius: 16px; background: #242426; }
+    .menu-bar { height: 29px; padding: 0 13px; display: flex; align-items: center; justify-content: flex-end; background: #0d0d0e; }
+    .status { width: 48px; height: 18px; display: flex; justify-content: flex-end; align-items: center; }
+    .meta { padding: 16px; }
+    h2 { margin: 0; font-size: 16px; }
+    p { margin: 7px 0 0; min-height: 38px; color: #a1a1a6; font-size: 13px; line-height: 1.45; }
+    .tag { display: inline-block; margin-top: 14px; padding: 4px 8px; border-radius: 7px; background: #38383a; color: #d1d1d6; font-size: 11px; }
+    svg { overflow: visible; }
+    .dim { fill: #fff; opacity: .28; }
+    .on { fill: #fff; }
+    .line { stroke: #fff; stroke-linecap: round; }
+    .label { fill: #fff; font: 600 10px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; letter-spacing: -.2px; }
+    @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>4G 状态栏图标 · 三个方向</h1>
+    <p class="intro">均为白色模板图标；真实显示时随 macOS 深浅菜单栏自动适配。</p>
+    <section class="grid">
+      <article>
+        <div class="menu-bar">
+          <div class="status" aria-label="方案 A：原生细柱">
+            <svg width="43" height="16" viewBox="0 0 43 16" aria-hidden="true">
+              <rect class="on" x="0" y="11" width="3" height="4" rx=".8"/>
+              <rect class="on" x="5" y="8" width="3" height="7" rx=".8"/>
+              <rect class="on" x="10" y="5" width="3" height="10" rx=".8"/>
+              <rect class="on" x="15" y="2" width="3" height="13" rx=".8"/>
+              <text class="label" x="23" y="12">4G</text>
+            </svg>
+          </div>
+        </div>
+        <div class="meta">
+          <h2>A · 原生细柱</h2>
+          <p>最接近 macOS 状态栏节奏，四根细柱和参考图同一视觉语言。</p>
+          <span class="tag">推荐</span>
+        </div>
+      </article>
+      <article>
+        <div class="menu-bar">
+          <div class="status" aria-label="方案 B：iPhone 紧凑柱">
+            <svg width="41" height="16" viewBox="0 0 41 16" aria-hidden="true">
+              <rect class="on" x="0" y="10" width="3.5" height="5" rx=".7"/>
+              <rect class="on" x="5" y="7" width="3.5" height="8" rx=".7"/>
+              <rect class="on" x="10" y="4" width="3.5" height="11" rx=".7"/>
+              <rect class="on" x="15" y="1" width="3.5" height="14" rx=".7"/>
+              <text class="label" x="23" y="12">4G</text>
+            </svg>
+          </div>
+        </div>
+        <div class="meta">
+          <h2>B · iPhone 紧凑柱</h2>
+          <p>柱宽略厚、间距更紧，远看更像手机蜂窝网络，也更容易辨认。</p>
+          <span class="tag">更醒目</span>
+        </div>
+      </article>
+      <article>
+        <div class="menu-bar">
+          <div class="status" aria-label="方案 C：极简阶梯柱">
+            <svg width="42" height="16" viewBox="0 0 42 16" aria-hidden="true">
+              <path class="on" d="M0 15v-4.2c0-.7.5-1.1 1.1-1.1h1.5c.7 0 1.1.4 1.1 1.1V15H0Zm5.2 0V7.7c0-.7.5-1.1 1.1-1.1h1.5c.7 0 1.1.4 1.1 1.1V15H5.2Zm5.2 0V4.5c0-.7.5-1.1 1.1-1.1h1.5c.7 0 1.1.4 1.1 1.1V15h-3.7Zm5.2 0V1.3c0-.7.5-1.1 1.1-1.1h1.5c.7 0 1.1.4 1.1 1.1V15h-3.7Z"/>
+              <text class="label" x="24" y="12">4G</text>
+            </svg>
+          </div>
+        </div>
+        <div class="meta">
+          <h2>C · 极简阶梯柱</h2>
+          <p>一体式阶梯轮廓，轮廓干净，适合菜单栏图标密集时保持克制。</p>
+          <span class="tag">最简洁</span>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

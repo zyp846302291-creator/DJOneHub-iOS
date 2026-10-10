@@ -1,0 +1,39 @@
+name: DJOneHub
+options:
+  bundleIdPrefix: com.djonehub
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    INFOPLIST_FILE: DJOneHub/Resources/Info.plist
+    PRODUCT_BUNDLE_IDENTIFIER: com.djonehub.remote
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: "1"
+  configs:
+    Debug:
+      CODE_SIGN_IDENTITY: "Apple Development"
+    Release:
+      CODE_SIGN_IDENTITY: "Apple Distribution"
+targets:
+  DJOneHub:
+    type: application
+    platform: iOS
+    sources:
+      - path: DJOneHub/Source
+        type: group
+      - path: DJOneHub/Resources
+        type: group
+    settings:
+      base:
+        INFOPLIST_FILE: DJOneHub/Resources/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.djonehub.remote
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        DEVELOPMENT_TEAM: 66LH6ZAB6R
+        SWIFT_OBJC_BRIDGING_HEADER: DJOneHub/BridgingHeader.h
+    systemFrameworks:
+      - CallKit
+      - AVFoundation
+      - PushKit
+      - UIKit
+      - Network

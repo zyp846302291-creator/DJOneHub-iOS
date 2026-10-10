@@ -1,0 +1,34 @@
+# macOS
+.DS_Store
+
+# Build artifacts
+.build/
+dist/
+*.o
+*.a
+*.so
+
+# Go binaries & backups
+djonehub-macos
+djonehub-remote
+push-relay-worker
+*.bak
+*.bak-*
+*.zip
+
+# Xcode / iOS
+DerivedData/
+xcuserdata/
+*.xcuserstate
+!DJOneHub.xcodeproj/project.pbxproj
+
+# Runtime data
+runtime/
+*.log
+
+# Audio capture helpers
+capture_audio_bin/
+
+# Editor
+.vscode/
+.idea/

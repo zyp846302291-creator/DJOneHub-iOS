@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh_CN</string>
+	<key>CFBundleDisplayName</key>
+	<string>DJOneHub</string>
+	<key>CFBundleExecutable</key>
+	<string>DJOneHubNotifier</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.jamie.djonehub.notifier</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>DJOneHub</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.2.10</string>
+	<key>CFBundleVersion</key>
+	<string>18</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSContactsUsageDescription</key>
+	<string>用于在拨号、最近通话和短信中显示联系人姓名，并支持从通讯录直接拨号。</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>用于通过已连接的 4G 模块进行双向语音通话。</string>
+</dict>
+</plist>

@@ -1,6 +1,14 @@
 # DJOneHub with iOS
 
-基于 4G USB 模块（BAIWANG / QDC 系列）的远程电话系统：用 iPhone 拨打/接听蜂窝电话，通话界面尽量贴近 iOS 原生 CallKit 体验，支持短信、eSIM、上网与 AT 调试。
+## 项目目的
+
+为**有锁版（运营商锁）iPhone** 以及**无卡（无 SIM 卡槽 / 未插卡）iPhone** 提供使用中国大陆 SIM 卡的通话与短信方案：
+
+- 将中国大陆 SIM 卡插入 4G USB 模块（BAIWANG / QDC 系列），模块通过 USB 连接 Mac
+- iPhone 通过局域网或 Tailscale 远程连接 Mac 上的服务，即可使用中国大陆号码**拨打/接听电话、收发短信**
+- 通话界面贴近 iOS 原生 CallKit 体验，锁屏也能正常接听来电
+
+> 硬件前提：一张可用的中国大陆 SIM 卡 + 一台运行 macOS 的电脑（作为主机）+ 一台 iPhone。
 
 ```
 ┌────────────┐  WebSocket   ┌────────────────┐   HTTP    ┌────────────────┐   USB   ┌────────────┐

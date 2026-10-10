@@ -34,6 +34,32 @@
 - 浅色 / 深色 / 跟随系统 三档主题
 - 断线自动重连与状态提示
 
+## 界面预览
+
+| 拨号盘 | 模块概览与信号 | 通话中 |
+| --- | --- | --- |
+| <img src="docs/screenshots/dialer.png" width="240"> | <img src="docs/screenshots/overview.png" width="240"> | <img src="docs/screenshots/in_call.png" width="240"> |
+
+| CallKit 系统通话界面 | 通话记录 | 短信 |
+| --- | --- | --- |
+| <img src="docs/screenshots/callkit.png" width="240"> | <img src="docs/screenshots/history.png" width="240"> | <img src="docs/screenshots/sms.png" width="240"> |
+
+| 设置（主题 / 功能 / 服务器连接） |
+| --- |
+| <img src="docs/screenshots/settings.png" width="240"> |
+
+> 通话界面与 iOS 系统通话界面一致：深灰渐变背景、Liquid Glass 玻璃按键，锁屏由 CallKit 接管。
+
+## 寻求帮助
+
+项目目前**缺少后台 CallKit 来电推送（VoIP Push）能力**：App 在前台或锁屏时可正常接听来电，但进程被系统挂起后无法收到新来电通知。补全这一能力需要：
+
+- 申请 VoIP Push Certificate（APNs）
+- 部署推送服务（见 `proxy/push_relay.go`）
+- **发布到 Apple App Store**（正式发布才能稳定获得后台推送的合规通道）
+
+**诚挚希望有经验的大神协助完成 App Store 发布**，让项目补全后台 CallKit 推送闭环。欢迎通过 Issue / PR 联系，也欢迎 fork 与二次开发。
+
 ## 快速开始
 
 ### 依赖

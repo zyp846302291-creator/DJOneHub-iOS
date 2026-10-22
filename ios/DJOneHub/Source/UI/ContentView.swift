@@ -19,7 +19,7 @@ struct ContentView: View {
     @StateObject private var callManager: CallManager
     @StateObject private var api: APIClient
     @StateObject private var contactManager = ContactManager()
-    @AppStorage("serverHost") private var serverHost = "100.100.221.117"
+    @AppStorage("serverHost") private var serverHost = "127.0.0.1"
     @AppStorage("serverPort") private var serverPort = 7576
     @AppStorage("appTheme") private var appTheme = "system" // system / light / dark
     @AppStorage("demoMode") private var demoMode = false
@@ -35,13 +35,13 @@ struct ContentView: View {
     @State private var dtmfInput = ""
     @State private var smsUnread = 0
 
-    init(serverHost: String = "100.100.221.117", serverPort: Int = 7576) {
+    init(serverHost: String = "127.0.0.1", serverPort: Int = 7576) {
         // 容错：host/port 异常时回退默认地址，避免强解包崩溃
         let safeHost = serverHost.trimmingCharacters(in: .whitespacesAndNewlines)
-        let host = safeHost.isEmpty ? "100.100.221.117" : safeHost
+        let host = safeHost.isEmpty ? "127.0.0.1" : safeHost
         let port = (1...65535).contains(serverPort) ? serverPort : 7576
         let urlString = "ws://\(host):\(port)/ws"
-        let url = URL(string: urlString) ?? URL(string: "ws://100.100.221.117:7576/ws")!
+        let url = URL(string: urlString) ?? URL(string: "ws://127.0.0.1:7576/ws")!
         _callManager = StateObject(wrappedValue: CallManager(serverURL: url))
         _api = StateObject(wrappedValue: APIClient(host: host, port: port))
     }
@@ -194,16 +194,20 @@ struct ContentView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .overlay(alignment: .topLeading) {
-                        // 原生样式未接红点角标（与系统 tab badge 同款小红点）
+                        // 原生样式未接红点角标：动态对齐"最近通话"段右上角
+                        // （segmented 两段均分，中线=左段右缘；横竖屏自适应）
                         if missedCallCount > 0 {
-                            Text("\(missedCallCount)")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .frame(minWidth: 18)
-                                .background(Capsule().fill(Color.red))
-                                .offset(x: 104, y: -4)
+                            GeometryReader { geo in
+                                Text("\(missedCallCount)")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .frame(minWidth: 18)
+                                    .background(Capsule().fill(Color.red))
+                                    .position(x: geo.size.width / 2 - 16, y: 9)
+                            }
+                            .allowsHitTesting(false)
                         }
                     }
                     .padding(.horizontal, 20)

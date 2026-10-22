@@ -3,7 +3,10 @@ import PushKit
 
 @main
 struct DJOneHubApp: App {
-    @AppStorage("serverHost") private var serverHost = "100.100.221.117"
+    // 方向锁定：仅 iPhone Duo 允许旋转，其他 iPhone 竖屏锁定（iPad 不限）
+    @UIApplicationDelegateAdaptor(OrientationLock.self) var orientationDelegate
+
+    @AppStorage("serverHost") private var serverHost = "127.0.0.1"
     @AppStorage("serverPort") private var serverPort = 7576
     @AppStorage("pushRelayURL") private var pushRelayURL = ""
 

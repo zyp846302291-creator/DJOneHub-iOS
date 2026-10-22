@@ -23,40 +23,29 @@ struct SMSView: View {
     }
 
     var body: some View {
-        // 官方推荐：NavigationSplitView 自适应（尊重系统行为——iPhone idiom 下
-        // 折叠为单栏推入式是设计使然，不手写双栏对抗系统）
-        NavigationSplitView(columnVisibility: .constant(.all)) {
-            conversationsListBody
-                .navigationTitle("信息")
+        // compact（iPhone 竖屏）：直接栈式（列表 ↔ 会话），避开 NavigationSplitView
+        // 在 iPhone 折叠模式下的首帧不渲染 bug（旋转才出现）；
+        // regular（iPad/展开）：官方 NavigationSplitView 双栏
+        Group {
+            if horizontalSizeClass == .regular {
+                NavigationSplitView(columnVisibility: .constant(.all)) {
+                    sidebarContent
+                } detail: {
+                    detailContent
+                }
+                .navigationSplitViewStyle(.balanced)
+                .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
+            } else {
+                Group {
+                    if let conv = selectedConversation {
+                        threadView(conv, showsBackButton: true)
+                    } else {
+                        sidebarContent
+                    }
+                }
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showCompose = true
-                        } label: {
-                            Image(systemName: "square.and.pencil")
-                        }
-                    }
-                }
-        } detail: {
-            Group {
-                if let conv = selectedConversation {
-                    threadView(conv, showsBackButton: false)
-                } else {
-                    VStack(spacing: 10) {
-                        Image(systemName: "message")
-                            .font(.system(size: 44))
-                            .foregroundColor(.appSecondary.opacity(0.5))
-                        Text("选择左侧会话查看短信")
-                            .font(.system(size: 15))
-                            .foregroundColor(.appSecondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
             }
         }
-        .navigationSplitViewStyle(.balanced)
-        .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
         .onTapGesture { focusedField = nil }
         .onAppear {
             loadReadStatus()
@@ -80,6 +69,41 @@ struct SMSView: View {
             }
         } message: {
             Text("将删除与 \(deleteTarget?.number ?? "") 的全部短信")
+        }
+    }
+
+    /// 侧栏/列表内容（两种形态共用）
+    private var sidebarContent: some View {
+        conversationsListBody
+            .navigationTitle("信息")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showCompose = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                }
+            }
+    }
+
+    /// 详情内容（regular 双栏右栏）
+    private var detailContent: some View {
+        Group {
+            if let conv = selectedConversation {
+                threadView(conv, showsBackButton: false)
+            } else {
+                VStack(spacing: 10) {
+                    Image(systemName: "message")
+                        .font(.system(size: 44))
+                        .foregroundColor(.appSecondary.opacity(0.5))
+                    Text("选择左侧会话查看短信")
+                        .font(.system(size: 15))
+                        .foregroundColor(.appSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
     }
 

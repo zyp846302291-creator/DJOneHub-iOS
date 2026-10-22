@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MoreView: View {
     @ObservedObject var api: APIClient
-    @AppStorage("serverHost") private var serverHost = "100.100.221.117"
+    @AppStorage("serverHost") private var serverHost = "127.0.0.1"
     @AppStorage("serverPort") private var serverPort = 7576
     @AppStorage("appTheme") private var appTheme = "system" // system / light / dark
     @AppStorage("demoMode") private var demoMode = false

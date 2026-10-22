@@ -20,6 +20,7 @@
 		7DE44258B72AD05B7C0182CF /* SignalingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF240C79D20E398740386E55 /* SignalingClient.swift */; };
 		847C00E0A43BAB4CDA231EEC /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D27F65A26CDF37C76C6D9E4A /* ContactsView.swift */; };
 		AA0E4D66C879243DB11BF7CE /* BackgroundKeepAlive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9316B8F643FBF68BCD5FCBBB /* BackgroundKeepAlive.swift */; };
+		AA10B1C2D83E4F5A90000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10B1C2D83E4F5A90000002 /* AppDelegate.swift */; };
 		B1BC8E6CC85B751A051688E6 /* DJOneHubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C84B6B8D45569D717C34DDF /* DJOneHubApp.swift */; };
 		DC912FE7679B3CF1378309FD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A93FA0D7F5F0FFA11C73ACC0 /* Assets.xcassets */; };
 		E0FB4726FF8F461357F34947 /* PushKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA63BAFB29DEED98FC566336 /* PushKitManager.swift */; };
@@ -39,6 +40,7 @@
 		9316B8F643FBF68BCD5FCBBB /* BackgroundKeepAlive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundKeepAlive.swift; sourceTree = "<group>"; };
 		A750E5D31CD9A8C685C67C50 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A93FA0D7F5F0FFA11C73ACC0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA10B1C2D83E4F5A90000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		B145446D53E8C0C0B9415EA7 /* DJOneHub.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DJOneHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B57CB252854FE6EEC179E019 /* SafeAudioTap.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SafeAudioTap.m; sourceTree = "<group>"; };
 		D13EA7BD9A36828C0488EA2E /* SMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSView.swift; sourceTree = "<group>"; };
@@ -94,6 +96,7 @@
 			children = (
 				44F7FE9B0529326B1F9D42A6 /* ContactManager.swift */,
 				3C84B6B8D45569D717C34DDF /* DJOneHubApp.swift */,
+				AA10B1C2D83E4F5A90000002 /* AppDelegate.swift */,
 				FAC576AF18559FD53D456307 /* Audio */,
 				4D2A58C976AD82C16FB4D6FB /* Call */,
 				252C22C40A15D2D81876086D /* Network */,
@@ -223,6 +226,7 @@
 				847C00E0A43BAB4CDA231EEC /* ContactsView.swift in Sources */,
 				60025B73FF4DD1CD330AEBE2 /* ContentView.swift in Sources */,
 				B1BC8E6CC85B751A051688E6 /* DJOneHubApp.swift in Sources */,
+				AA10B1C2D83E4F5A90000001 /* AppDelegate.swift in Sources */,
 				48864EB764216543D326BC70 /* MoreView.swift in Sources */,
 				2E8D79D67DB95C3274529418 /* OverviewView.swift in Sources */,
 				E0FB4726FF8F461357F34947 /* PushKitManager.swift in Sources */,

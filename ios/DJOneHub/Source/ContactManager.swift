@@ -17,36 +17,39 @@ class ContactManager: ObservableObject {
     private var phoneToImage: [String: Data] = [:]  // 规范化号码 → 头像
     
     func loadContacts() {
-        let store = CNContactStore()
-        let keys: [CNKeyDescriptor] = [
-            CNContactGivenNameKey as CNKeyDescriptor,
-            CNContactFamilyNameKey as CNKeyDescriptor,
-            CNContactPhoneNumbersKey as CNKeyDescriptor,
-            CNContactThumbnailImageDataKey as CNKeyDescriptor
-        ]
-        let request = CNContactFetchRequest(keysToFetch: keys)
-        var result: [ContactItem] = []
-        var lookup: [String: String] = [:]
-        var imageLookup: [String: Data] = [:]
-        
-        try? store.enumerateContacts(with: request) { cnContact, _ in
-            let name = "\(cnContact.familyName)\(cnContact.givenName)"
-            let phones = cnContact.phoneNumbers.map { $0.value.stringValue }
-            let image = cnContact.thumbnailImageData
-            if !name.trimmingCharacters(in: .whitespaces).isEmpty {
-                result.append(ContactItem(name: name, phones: phones, imageData: image))
-                for phone in phones {
-                    let key = self.normalize(phone)
-                    lookup[key] = name
-                    if let image { imageLookup[key] = image }
+        // 联系人枚举是耗时 I/O，放后台线程执行，避免阻塞主线程（Contacts 框架会报 main-thread 警告）
+        DispatchQueue.global(qos: .userInitiated).async {
+            let store = CNContactStore()
+            let keys: [CNKeyDescriptor] = [
+                CNContactGivenNameKey as CNKeyDescriptor,
+                CNContactFamilyNameKey as CNKeyDescriptor,
+                CNContactPhoneNumbersKey as CNKeyDescriptor,
+                CNContactThumbnailImageDataKey as CNKeyDescriptor
+            ]
+            let request = CNContactFetchRequest(keysToFetch: keys)
+            var result: [ContactItem] = []
+            var lookup: [String: String] = [:]
+            var imageLookup: [String: Data] = [:]
+
+            try? store.enumerateContacts(with: request) { cnContact, _ in
+                let name = "\(cnContact.familyName)\(cnContact.givenName)"
+                let phones = cnContact.phoneNumbers.map { $0.value.stringValue }
+                let image = cnContact.thumbnailImageData
+                if !name.trimmingCharacters(in: .whitespaces).isEmpty {
+                    result.append(ContactItem(name: name, phones: phones, imageData: image))
+                    for phone in phones {
+                        let key = self.normalize(phone)
+                        lookup[key] = name
+                        if let image { imageLookup[key] = image }
+                    }
                 }
             }
-        }
-        
-        DispatchQueue.main.async {
-            self.contacts = result
-            self.phoneToName = lookup
-            self.phoneToImage = imageLookup
+
+            DispatchQueue.main.async {
+                self.contacts = result
+                self.phoneToName = lookup
+                self.phoneToImage = imageLookup
+            }
         }
     }
     

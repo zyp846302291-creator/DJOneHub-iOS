@@ -118,6 +118,7 @@ struct SMSSendResponse: Codable {
 
 class APIClient: ObservableObject {
     let baseURL: String
+    var demoMode: Bool = false
 
     init(host: String, port: Int) {
         self.baseURL = "http://\(host):\(port)"
@@ -146,12 +147,47 @@ class APIClient: ObservableObject {
     // MARK: - Status
 
     func fetchStatus() async throws -> ModuleStatus {
+        if demoMode {
+            return ModuleStatus(
+                imei: "861234567890123",
+                firmware: "EG25GAR09A06M4G",
+                iccid: "8986001234567890123",
+                imsi: "460011234567890",
+                operator_name: "中国联通",
+                sim_inserted: true,
+                signal_dbm: -69,
+                signal_rsrp: -69,
+                signal_rsrq: -8,
+                radio_band: "BAND 3",
+                radio_channel: 1750,
+                reg_status: 1,
+                reg_status_text: "已注册",
+                ps_attached: false,
+                lac: "1A2B",
+                cell_id: "12345678",
+                apn: "3GNET",
+                ims_status: 0,
+                network_mode: "LTE",
+                network_duplex: "FDD",
+                usbnet_mode: 0
+            )
+        }
         return try await get("/api/status")
     }
 
     // MARK: - SMS
 
     func fetchSMS() async throws -> [SMSMessage] {
+        if demoMode {
+            // 末两条用"当前时刻"，演示模式下必为未读（验证角标+行首蓝点）
+            let now = ISO8601DateFormatter().string(from: Date())
+            return [
+                SMSMessage(sender: "10086", content: "【话费提醒】您本月话费余额已不足10元，请及时充值。", timestamp: "2026-10-17 09:23"),
+                SMSMessage(sender: "10010", content: "【中国联通】欢迎使用联通秘书服务，您有1条新留言。", timestamp: "2026-10-17 08:15"),
+                SMSMessage(sender: "10690123456", content: "【验证】您的验证码为 123456，5分钟内有效。", timestamp: now),
+                SMSMessage(sender: "95588", content: "【工商银行】您尾号3366的卡片消费 1,288.00 元。", timestamp: now)
+            ]
+        }
         return try await get("/api/sms")
     }
 

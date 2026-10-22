@@ -123,8 +123,8 @@ func TestManagerCanExecuteATWhenRunning(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	m.running = true
-	m.healthy = true
+	m.running.Store(true)
+	m.healthy.Store(true)
 
 	if !m.CanExecuteAT() {
 		t.Fatal("CanExecuteAT() = false, want true")
@@ -235,8 +235,8 @@ func TestHandleCommandNotifiesDisconnectOnFatalWriteError(t *testing.T) {
 	}
 	port := &failingSerialPort{writeErr: errors.New("input/output error")}
 	m.port = port
-	m.running = true
-	m.healthy = true
+	m.running.Store(true)
+	m.healthy.Store(true)
 	disconnected := make(chan struct{}, 1)
 	m.SetOnDisconnectWithReason(func(string) { disconnected <- struct{}{} })
 
@@ -271,8 +271,8 @@ func TestHandleCommandTriggersWatchdogAfterConsecutiveNormalTimeouts(t *testing.
 	}
 	port := &timeoutSerialPort{}
 	m.port = port
-	m.running = true
-	m.healthy = true
+	m.running.Store(true)
+	m.healthy.Store(true)
 	disconnected := make(chan string, 1)
 	m.SetOnDisconnectWithReason(func(reason string) { disconnected <- reason })
 
@@ -318,8 +318,8 @@ func TestHandleCommandIgnoresHighPriorityTimeoutsForWatchdog(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 	m.port = &timeoutSerialPort{}
-	m.running = true
-	m.healthy = true
+	m.running.Store(true)
+	m.healthy.Store(true)
 	disconnected := make(chan string, 1)
 	m.SetOnDisconnectWithReason(func(reason string) { disconnected <- reason })
 
@@ -353,8 +353,8 @@ func TestHandleCommandResetsTimeoutWatchdogOnDeviceError(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 	m.port = &timeoutSerialPort{}
-	m.running = true
-	m.healthy = true
+	m.running.Store(true)
+	m.healthy.Store(true)
 	disconnected := make(chan string, 1)
 	m.SetOnDisconnectWithReason(func(reason string) { disconnected <- reason })
 
@@ -411,8 +411,8 @@ func TestExecuteATReturnsFatalSerialErrorBeforeManagerStopped(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 	m.port = &failingSerialPort{writeErr: errors.New("input/output error")}
-	m.running = true
-	m.healthy = true
+	m.running.Store(true)
+	m.healthy.Store(true)
 	disconnected := make(chan struct{}, 1)
 	m.SetOnDisconnectWithReason(func(string) { disconnected <- struct{}{} })
 
@@ -455,8 +455,8 @@ func TestManagerExecuteATReturnsResponseWhenRunning(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	m.running = true
-	m.healthy = true
+	m.running.Store(true)
+	m.healthy.Store(true)
 
 	go func() {
 		req := <-m.cmdChan

@@ -3,7 +3,9 @@ import PushKit
 import UIKit
 
 /// Manages PushKit VoIP token registration and relay registration.
-/// When a VoIP push arrives, it notifies CallManager to show incoming call UI.
+/// When a VoIP push arrives, it reports the incoming call to CallKit
+/// SYNCHRONOUSLY before calling the PushKit completion handler
+/// (Apple requirement — otherwise iOS terminates the app).
 class PushKitManager: NSObject, ObservableObject, PKPushRegistryDelegate {
     static let shared = PushKitManager()
 
@@ -12,6 +14,14 @@ class PushKitManager: NSObject, ObservableObject, PKPushRegistryDelegate {
 
     /// Relay URL (Cloudflare Worker)
     @Published var relayURL: String = ""
+
+    /// 设备注册用的 CallKit 上报句柄。
+    /// 由 App 启动时注入（CallKitManager 必须在 VoIP push 到达前就绪）。
+    var callKitReporter: ((String, UUID) -> Void)?
+
+    /// 防止重复创建 PKPushRegistry（onAppear + onChange 双触发场景）
+    private var registryStarted = false
+    private var lastRelayURL: String = ""
 
     /// Device identity for relay auth
     private var deviceID: String {
@@ -29,6 +39,10 @@ class PushKitManager: NSObject, ObservableObject, PKPushRegistryDelegate {
 
     func start(relayURL: String) {
         self.relayURL = relayURL
+        // relayURL 变化时需要重新注册（上报新地址），否则去重跳过
+        if registryStarted && relayURL == lastRelayURL { return }
+        registryStarted = true
+        lastRelayURL = relayURL
         let registry = PKPushRegistry(queue: .main)
         registry.delegate = self
         registry.desiredPushTypes = [.voIP]
@@ -52,8 +66,38 @@ class PushKitManager: NSObject, ObservableObject, PKPushRegistryDelegate {
 
     func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
         print("[PushKit] received VoIP push: \(payload.dictionaryPayload)")
-        handleIncomingPush(payload: payload)
+        // Apple 规范：必须在 completion 之前同步上报 CallKit，
+        // 否则系统会终止 App（且审核必拒）。
+        let (caller, callUUID) = parseIncomingPayload(payload)
+        if let reporter = callKitReporter {
+            // 同步路径：CallKitManager.reportIncomingCall 内部发起
+            // reportNewIncomingCall 调用后立即返回（系统异步回调 completion），
+            // 满足"completion 前已上报"的要求。
+            reporter(caller, callUUID)
+        } else {
+            // 兜底：reporter 尚未注入（App 冷启动极端时序），仍需上报，
+            // 直接通知 CallKitManager 兜底处理（同步调用链）。
+            NotificationCenter.default.post(
+                name: .pushKitIncomingCall,
+                object: nil,
+                userInfo: ["caller": caller, "call_uuid": callUUID.uuidString]
+            )
+        }
         completion()
+    }
+
+    /// 解析推送 payload：兼容 number / caller_name / caller 多种字段名
+    /// （proxy 旧协议用 caller，Worker 新协议用 number + caller_name）。
+    private func parseIncomingPayload(_ payload: PKPushPayload) -> (String, UUID) {
+        let dict = payload.dictionaryPayload
+        let number = dict["number"] as? String
+        let callerName = dict["caller_name"] as? String
+        let caller = dict["caller"] as? String
+        // 展示优先级：来电号码 > 联系人名 > caller 旧字段 > 未知
+        let display = number ?? callerName ?? caller ?? "未知号码"
+        let uuidStr = dict["call_uuid"] as? String ?? dict["uuid"] as? String
+        let callUUID = uuidStr.flatMap(UUID.init) ?? UUID()
+        return (display, callUUID)
     }
 
     // MARK: - Register with Cloudflare Relay
@@ -64,8 +108,20 @@ class PushKitManager: NSObject, ObservableObject, PKPushRegistryDelegate {
             return
         }
 
-        let url = URL(string: "\(relayURL)/v1/devices/register")!
+        guard let base = URL(string: relayURL.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            print("[PushKit] invalid relay URL: \(relayURL)")
+            return
+        }
+        // 容错：去掉尾部斜杠再拼接路径
+        var baseStr = base.absoluteString
+        while baseStr.hasSuffix("/") { baseStr.removeLast() }
+        guard let url = URL(string: baseStr + "/v1/devices/register") else {
+            print("[PushKit] cannot build register URL from \(relayURL)")
+            return
+        }
+
         var request = URLRequest(url: url)
+        request.timeoutInterval = 15
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -77,7 +133,7 @@ class PushKitManager: NSObject, ObservableObject, PKPushRegistryDelegate {
             "watch_voip_token": "",
             "live_activity_push_to_start_token": "",
             "bundle_id": Bundle.main.bundleIdentifier ?? "com.djonehub.remote",
-            "environment": "sandbox", // "production" for TestFlight/AppStore
+            "environment": Self.pushEnvironment,
             "media_transport": "legacy_pcm"
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
@@ -98,27 +154,19 @@ class PushKitManager: NSObject, ObservableObject, PKPushRegistryDelegate {
         }.resume()
     }
 
-    // MARK: - Handle Incoming Push
-
-    private func handleIncomingPush(payload: PKPushPayload) {
-        // Extract call info from payload
-        let dict = payload.dictionaryPayload
-        let callerNumber = dict["caller"] as? String ?? "未知号码"
-        let callUUID = dict["call_uuid"] as? String ?? UUID().uuidString
-
-        print("[PushKit] incoming call from \(callerNumber), uuid=\(callUUID)")
-
-        // Notify CallManager to report incoming call via CallKit
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .pushKitIncomingCall,
-                object: nil,
-                userInfo: [
-                    "caller": callerNumber,
-                    "call_uuid": callUUID
-                ]
-            )
+    /// 推送环境自动检测：模拟器/开发构建走 sandbox，TestFlight/App Store 走 production。
+    /// 依据：App Store/TestFlight 分发 receipt 缺失 "beta-receipts" 之外的开发标识。
+    private static var pushEnvironment: String {
+        #if DEBUG
+        return "sandbox"
+        #else
+        // Xcode 直接安装的构建 receipt 落在 sandboxReceipt；TestFlight/App Store 为 production receipt。
+        if let receiptURL = Bundle.main.appStoreReceiptURL,
+           receiptURL.lastPathComponent == "sandboxReceipt" {
+            return "sandbox"
         }
+        return "production"
+        #endif
     }
 }
 

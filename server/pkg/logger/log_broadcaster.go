@@ -44,9 +44,14 @@ func (b *Broadcaster) Subscribe() chan LogEntry {
 	return ch
 }
 
-// Unsubscribe 取消订阅
+// Unsubscribe 取消订阅。
+// 幂等安全：重复调用同一 channel 不会 panic（defer 清理路径可能触发多次）。
 func (b *Broadcaster) Unsubscribe(ch chan LogEntry) {
 	b.mu.Lock()
+	if _, ok := b.clients[ch]; !ok {
+		b.mu.Unlock()
+		return
+	}
 	delete(b.clients, ch)
 	b.mu.Unlock()
 	close(ch)

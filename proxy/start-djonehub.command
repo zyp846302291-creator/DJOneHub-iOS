@@ -3,7 +3,7 @@
 # 双击即可运行，启动主服务 + Go代理
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-MAIN_BIN="/Users/zhouyuanpei/Library/Application Support/DJOneHub/runtime/bin/djonehub-macos"
+MAIN_BIN="$HOME/Library/Application Support/DJOneHub/runtime/bin/djonehub-macos"
 PROXY_BIN="$PROJECT_DIR/djonehub-remote"
 
 echo "=============================="

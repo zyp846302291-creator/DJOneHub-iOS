@@ -4,7 +4,7 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLIST="$PROJECT_DIR/DJOneHub/Resources/Info.plist"
-DEVICE_ID="YOUR_DEVICE_UDID"
+DEVICE_ID="00008150-00043DD42E42401C"
 
 # --- 1. 自动递增 CFBundleVersion (用 PlistBuddy，sed 对多行 plist 不可靠) ---
 CURRENT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PLIST")

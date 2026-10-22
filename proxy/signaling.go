@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -91,10 +91,10 @@ func (h *HubSignaling) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &wsClient{
-		conn:     conn,
-		send:     make(chan []byte, 64),
-		hub:      h,
-		remoteIP: r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")],
+		conn: conn,
+		send: make(chan []byte, 64),
+		hub:  h,
+		remoteIP: hostFromRemoteAddr(r.RemoteAddr),
 		stopCh:   make(chan struct{}),
 	}
 
@@ -232,6 +232,20 @@ func (c *wsClient) handleCommand(msg SignalMessage) {
 	case "ping":
 		c.sendMessage(SignalMessage{Type: "pong"})
 
+	case "push_credentials":
+		// iPhone 上报推送凭证（与 App 注册 Worker 时相同的 device_id/device_secret），
+		// proxy 触发来电 VoIP push 时使用。注册失败无妨，仅记录。
+		var payload pushCredentials
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+			log.Printf("invalid push_credentials payload: %v", err)
+			return
+		}
+		if c.hub.pushRelay != nil {
+			c.hub.pushRelay.UpdateCredentials(payload)
+		} else {
+			log.Printf("push relay not configured, ignoring push_credentials")
+		}
+
 	default:
 		log.Printf("unknown signal type: %s", msg.Type)
 	}
@@ -261,6 +275,14 @@ func (c *wsClient) proxyToHub(method, path string, body interface{}) {
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
+
+	// mute 转发的 /api/calls/audio/mute 在部分 server 版本不存在，
+	// 静默降级（本地 muted 标志已生效，足以静音 iPhone→Mac 上行）。
+	if resp.StatusCode == http.StatusNotFound {
+		log.Printf("upstream has no %s route (ignored)", path)
+		return
+	}
+
 	c.sendMessage(SignalMessage{
 		Type:    "api_response",
 		Payload: json.RawMessage(respBody),
@@ -477,16 +499,22 @@ func (h *HubSignaling) broadcastState() {
 		c.mu.Unlock()
 	}
 
-	// Push relay: send VoIP push if incoming call and no iPhone connected
+	// Push relay: send VoIP push if incoming call and no iPhone connected.
+	// 兼容 server 侧来电状态值：incoming / waiting / ringing（B4 仲裁前的防御式处理）
 	if h.pushRelay != nil && state.Active != nil &&
 		state.Active.Direction == "incoming" &&
-		state.Active.State == "ringing" &&
+		(state.Active.State == "ringing" || state.Active.State == "incoming" || state.Active.State == "waiting") &&
 		len(clients) == 0 {
 		callUUID := state.Active.ID
 		if callUUID == "" {
 			callUUID = "call-" + time.Now().Format("20060102-150405")
 		}
-		go h.pushRelay.SendCallPush(state.Active.Number, callUUID)
+		// 推送失败在此记录（此前 go 起的调用返回值被丢弃，失败无任何日志）
+		go func(number, id string) {
+			if err := h.pushRelay.SendCallPush(number, id); err != nil {
+				log.Printf("[Push] incoming call push failed: %v", err)
+			}
+		}(state.Active.Number, callUUID)
 	}
 
 	// Reset push dedup when call ends
@@ -503,4 +531,13 @@ func (h *HubSignaling) ClientCount() int {
 
 func (h *HubSignaling) SetPushRelay(relay *PushRelay) {
 	h.pushRelay = relay
+}
+
+// hostFromRemoteAddr 从 RemoteAddr 安全提取主机部分（兼容 IPv6 与异常格式）。
+func hostFromRemoteAddr(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+	return host
 }

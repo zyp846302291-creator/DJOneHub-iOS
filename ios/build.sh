@@ -4,7 +4,7 @@ set -eu
 root="${0:A:h}"
 cd "${root}"
 
-DEVICE_ID="YOUR_DEVICE_UDID"
+DEVICE_ID="00008150-00043DD42E42401C"
 
 echo "=== Building DJOneHub iOS ==="
 xcodebuild -scheme DJOneHub -project DJOneHub.xcodeproj \

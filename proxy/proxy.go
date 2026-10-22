@@ -19,6 +19,7 @@ func main() {
 	upstream := flag.String("upstream", "http://127.0.0.1:7575", "DJOneHub backend")
 	pushRelayURL := flag.String("push-relay", "", "Cloudflare Worker relay URL for VoIP push (e.g. https://djonehub-push-relay.workers.dev)")
 	pushDeviceID := flag.String("push-device-id", "", "Device ID for push relay auth")
+	pushDeviceSecret := flag.String("push-device-secret", "", "Device secret for push relay auth (can also be reported by iPhone via push_credentials message)")
 	flag.Parse()
 
 	target, err := url.Parse(*upstream)
@@ -31,9 +32,13 @@ func main() {
 
 	// Setup push relay if configured
 	if *pushRelayURL != "" {
-		relay := NewPushRelay(*pushRelayURL, *pushDeviceID)
+		relay := NewPushRelay(*pushRelayURL, *pushDeviceID, *pushDeviceSecret)
 		signaling.SetPushRelay(relay)
-		log.Printf("Push relay enabled: %s", *pushRelayURL)
+		if *pushDeviceID != "" && *pushDeviceSecret != "" {
+			log.Printf("Push relay enabled: %s (credentials from flags)", *pushRelayURL)
+		} else {
+			log.Printf("Push relay enabled: %s (waiting for iPhone push_credentials)", *pushRelayURL)
+		}
 	}
 
 	signaling.StartStatePoller(2 * time.Second)

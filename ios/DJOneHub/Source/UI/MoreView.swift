@@ -2,17 +2,17 @@ import SwiftUI
 
 struct MoreView: View {
     @ObservedObject var api: APIClient
-    @AppStorage("serverHost") private var serverHost = ""
+    @AppStorage("serverHost") private var serverHost = "100.100.221.117"
     @AppStorage("serverPort") private var serverPort = 7576
     @AppStorage("appTheme") private var appTheme = "system" // system / light / dark
+    @AppStorage("demoMode") private var demoMode = false
     @State private var hostInput = ""
     @State private var portInput = ""
     @State private var showSaved = false
 
     var body: some View {
         List {
-            Section {
-                // 外观模式：跟随系统 / 浅色 / 深色
+            Section {                // 外观模式：跟随系统 / 浅色 / 深色
                 Picker("外观模式", selection: $appTheme) {
                     Text("跟随系统").tag("system")
                     Text("浅色").tag("light")
@@ -58,7 +58,7 @@ struct MoreView: View {
                     HStack {
                         Text("地址")
                             .frame(width: 44, alignment: .leading)
-                        TextField("Tailscale地址或IP", text: $hostInput)
+                        TextField("服务器地址或IP", text: $hostInput)
                             .textFieldStyle(.roundedBorder)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
@@ -93,12 +93,30 @@ struct MoreView: View {
                         .background(showSaved ? Color.clear : Color.blue)
                         .cornerRadius(8)
                     }
+
+                    // 当前连接地址（并入分组卡片内，非 footer 悬浮文字）
+                    HStack {
+                        Text("当前")
+                            .font(.system(size: 13))
+                            .foregroundColor(.appSecondary)
+                        Spacer()
+                        Text("\(serverHost):\(String(serverPort))")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.appPrimary)
+                    }
+                    .padding(.top, 4)
                 }
+                .listRowSeparator(.hidden)
             } header: {
                 Text("服务器连接")
+            }
+
+            Section {
+                Toggle("演示模式", isOn: $demoMode)
+            } header: {
+                Text("调试")
             } footer: {
-                Text("当前: \(serverHost):\(String(serverPort))\n请在「服务器设置」中填写代理地址（局域网/Tailscale IP:7576）")
-                    .font(.system(size: 12))
+                Text("开启后使用模拟数据展示全部界面，无需连接服务器。重启 App 生效。")
             }
 
             Section {
@@ -111,6 +129,21 @@ struct MoreView: View {
             }
         }
         .navigationTitle("更多")
+        // 点击键盘以外的区域收起键盘（IP/端口输入无 Return 键可关）
+        .onTapGesture {
+            hideKeyboard()
+        }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                hideKeyboard()
+            }
+        )
+    }
+
+    /// 收起系统键盘：让当前第一响应者辞职
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                        to: nil, from: nil, for: nil)
     }
 
     private func rowItem(icon: String, title: String, subtitle: String, color: Color) -> some View {
@@ -485,8 +518,10 @@ struct ATDebugView: View {
                     .font(.system(size: 14, design: .monospaced))
                     .foregroundColor(.green)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: 900, alignment: .leading) // 展开内屏限制行宽，保持可读性
                     .padding(16)
             }
+            .frame(maxWidth: .infinity)
             .background(Color.black)
         }
         .navigationTitle("AT 调试")

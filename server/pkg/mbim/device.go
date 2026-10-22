@@ -48,12 +48,23 @@ func newDevice(tr Transport) *Device {
 }
 
 // Open performs the MBIM OPEN handshake and starts the read loop.
+// 握手失败时关闭 readLoop 与 transport，避免 goroutine 与设备句柄泄漏
+// （调用方对 Open 失败的惯例是丢弃对象、不再 Close）。
 func (d *Device) Open(ctx context.Context, maxControlTransfer uint32) error {
 	d.mu.Lock()
 	d.maxCtrl = maxControlTransfer
 	d.mu.Unlock()
 	go d.readLoop()
 
+	openErr := d.performOpenHandshake(ctx, maxControlTransfer)
+	if openErr != nil {
+		_ = d.Close()
+		return openErr
+	}
+	return nil
+}
+
+func (d *Device) performOpenHandshake(ctx context.Context, maxControlTransfer uint32) error {
 	// 走 mbim-proxy 时必须先发 PROXY_CONFIG 告诉代理要打开哪个底层设备,
 	// 之后 OPEN 才能被代理正确转发——顺序与 libmbim / `mbimcli -p` 一致。
 	// 顺序反了(先 OPEN)代理不知道目标设备,DeviceCaps 等后续命令会失败。

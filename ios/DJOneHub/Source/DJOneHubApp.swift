@@ -3,7 +3,7 @@ import PushKit
 
 @main
 struct DJOneHubApp: App {
-    @AppStorage("serverHost") private var serverHost = ""
+    @AppStorage("serverHost") private var serverHost = "100.100.221.117"
     @AppStorage("serverPort") private var serverPort = 7576
     @AppStorage("pushRelayURL") private var pushRelayURL = ""
 

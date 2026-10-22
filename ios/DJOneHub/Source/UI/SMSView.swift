@@ -3,6 +3,8 @@ import SwiftUI
 struct SMSView: View {
     @ObservedObject var api: APIClient
     @Binding var unreadSMS: Int
+    // 官方判定：内屏（regular）时详情栏也显示新信息按钮
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var messages: [SMSMessage] = []
     @State private var conversations: [SMSConversation] = []
     @State private var selectedConversation: SMSConversation?
@@ -21,19 +23,47 @@ struct SMSView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let conv = selectedConversation {
-                threadView(conv)
-            } else {
-                conversationList
+        // 官方推荐：NavigationSplitView 自适应（尊重系统行为——iPhone idiom 下
+        // 折叠为单栏推入式是设计使然，不手写双栏对抗系统）
+        NavigationSplitView(columnVisibility: .constant(.all)) {
+            conversationsListBody
+                .navigationTitle("信息")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showCompose = true
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                        }
+                    }
+                }
+        } detail: {
+            Group {
+                if let conv = selectedConversation {
+                    threadView(conv, showsBackButton: false)
+                } else {
+                    VStack(spacing: 10) {
+                        Image(systemName: "message")
+                            .font(.system(size: 44))
+                            .foregroundColor(.appSecondary.opacity(0.5))
+                        Text("选择左侧会话查看短信")
+                            .font(.system(size: 15))
+                            .foregroundColor(.appSecondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
+        .navigationSplitViewStyle(.balanced)
+        .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
         .onTapGesture { focusedField = nil }
         .onAppear {
             loadReadStatus()
             Task { await loadSMS() }
         }
         .refreshable { await loadSMS() }
+        .sheet(isPresented: $showCompose) { composeView }
         .alert("清空全部短信？", isPresented: $showClearAlert) {
             Button("取消", role: .cancel) {}
             Button("清空", role: .destructive) {
@@ -53,14 +83,98 @@ struct SMSView: View {
         }
     }
 
-    // MARK: - Conversation List
+    // MARK: - Compose（新建短信，原生信息 App 风格）
 
-    private var conversationList: some View {
-        VStack(spacing: 0) {
-            // Send form
-            sendFormSection
+    @State private var showCompose = false
 
-            // Conversations
+    private var composeView: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // 收件人（原生样式：无边框 + 底部分隔线，自动带 + 联系人按钮）
+                HStack(spacing: 8) {
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 22))
+                        .foregroundColor(.appSecondary)
+                    TextField("收件人", text: $sendPhone)
+                        .keyboardType(.phonePad)
+                        .font(.system(size: 16))
+                        .focused($focusedField, equals: .phone)
+                    if !sendPhone.isEmpty {
+                        Button {
+                            sendPhone = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.appSecondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .overlay(alignment: .bottom) { Divider() }
+
+                // 内容输入区（多行自适应，占满剩余空间）
+                ScrollView {
+                    TextField("短信内容", text: $sendMessage, axis: .vertical)
+                        .lineLimit(3...8)
+                        .font(.system(size: 16))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .focused($focusedField, equals: .message)
+                }
+
+                // 发送状态提示
+                if let status = sendStatus {
+                    Text(status)
+                        .font(.system(size: 12))
+                        .foregroundColor(status.contains("成功") ? .green : .red)
+                        .padding(.vertical, 4)
+                }
+
+                // 发送按钮（右下角胶囊，原生风格）
+                HStack {
+                    Spacer()
+                    Button {
+                        Task {
+                            await sendSMS()
+                            // 发送成功后自动关闭
+                            if sendStatus?.contains("成功") == true {
+                                try? await Task.sleep(nanoseconds: 600_000_000)
+                                showCompose = false
+                                sendStatus = nil
+                                await loadSMS()
+                            }
+                        }
+                    } label: {
+                        Text("发送")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 10)
+                            .background(sendPhone.isEmpty || sendMessage.isEmpty ? Color.gray : Color.blue, in: Capsule())
+                    }
+                    .disabled(sendPhone.isEmpty || sendMessage.isEmpty)
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
+            }
+            .navigationTitle("新信息")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("取消") {
+                        sendStatus = nil
+                        showCompose = false
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+    }
+
+    /// 会话列表主体（原生 List 铺满）
+    private var conversationsListBody: some View {
+        Group {
             if conversations.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "message")
@@ -87,6 +201,14 @@ struct SMSView: View {
                             } label: {
                                 Label("删除", systemImage: "trash")
                             }
+                            // 原生信息同款：标为未读（蓝）
+                            Button {
+                                readConversations[conv.number] = ""
+                                UserDefaults.standard.set(readConversations, forKey: "smsReadStatus")
+                            } label: {
+                                Label("标为未读", systemImage: "envelope.badge")
+                            }
+                            .tint(.blue)
                         }
                     }
                 }
@@ -95,50 +217,15 @@ struct SMSView: View {
         }
     }
 
-    private var sendFormSection: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                TextField("接收号码", text: $sendPhone)
-                    .keyboardType(.phonePad)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 120)
-                    .focused($focusedField, equals: .phone)
-
-                TextField("短信内容", text: $sendMessage)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($focusedField, equals: .message)
-
-                Button {
-                    Task { await sendSMS() }
-                } label: {
-                    Text("发送")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(sendPhone.isEmpty || sendMessage.isEmpty ? Color.gray : Color.blue)
-                        .cornerRadius(8)
-                }
-                .disabled(sendPhone.isEmpty || sendMessage.isEmpty)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
-            if let status = sendStatus {
-                Text(status)
-                    .font(.system(size: 12))
-                    .foregroundColor(status.contains("成功") ? .green : .red)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 4)
-            }
-
-            Divider()
-        }
-        .background(Color(.systemGray6).opacity(0.5))
-    }
-
     private func conversationRow(_ conv: SMSConversation) -> some View {
-        HStack(spacing: 12) {
+        let isUnread = (readConversations[conv.number] ?? "") < conv.lastMessage.timestamp
+        return HStack(spacing: 12) {
+            // 原生信息风格：未读行首蓝点
+            Circle()
+                .fill(Color.blue)
+                .frame(width: 10, height: 10)
+                .opacity(isUnread ? 1 : 0)   // 恒占位，布局稳定
+
             // Avatar
             Circle()
                 .fill(Color.blue.opacity(0.2))
@@ -166,15 +253,33 @@ struct SMSView: View {
                         .foregroundColor(.appSecondary)
                         .lineLimit(1)
                     Spacer()
-                    let isUnread = (readConversations[conv.number] ?? "") < conv.lastMessage.timestamp
-                    if isUnread {
-                        Text("未读")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white)
+                    // 预览行快捷复制验证码（不用进会话）
+                    if let code = extractVerificationCode(from: conv.lastMessage.content) {
+                        Button {
+                            UIPasteboard.general.string = code
+                            copiedCode = code
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                if copiedCode == code { copiedCode = nil }
+                            }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: copiedCode == code ? "checkmark" : "doc.on.doc")
+                                    .font(.system(size: 10, weight: .medium))
+                                Text(copiedCode == code ? "已复制" : code)
+                                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            }
+                            .foregroundColor(copiedCode == code ? .green : .blue)
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.blue)
-                            .cornerRadius(10)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.1), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    let isUnreadBadge = (readConversations[conv.number] ?? "") < conv.lastMessage.timestamp
+                    if isUnreadBadge {
+                        // 已由行首蓝点替代（原生信息风格），此处保留占位不影响布局
+                        EmptyView()
                     }
                 }
             }
@@ -184,16 +289,18 @@ struct SMSView: View {
 
     // MARK: - Thread View
 
-    private func threadView(_ conv: SMSConversation) -> some View {
+    private func threadView(_ conv: SMSConversation, showsBackButton: Bool = true) -> some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Button {
-                    selectedConversation = nil
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.blue)
+                if showsBackButton {
+                    Button {
+                        selectedConversation = nil
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.blue)
+                    }
                 }
 
                 VStack(alignment: .leading) {
@@ -216,8 +323,11 @@ struct SMSView: View {
                 }
 
                 Button {
+                    // 转发：打开新建页并预填收件人
                     sendPhone = conv.number
+                    sendMessage = ""
                     selectedConversation = nil
+                    showCompose = true
                 } label: {
                     Image(systemName: "arrowshape.turn.up.left")
                         .font(.system(size: 18))
@@ -274,12 +384,78 @@ struct SMSView: View {
                     .background(Color(.systemGray4))
                     .cornerRadius(12)
 
+                // 验证码快捷复制（自动提取到验证码时显示）
+                if let code = extractVerificationCode(from: msg.content) {
+                    Button {
+                        UIPasteboard.general.string = code
+                        copiedCode = code
+                        // 1.2 秒后恢复按钮文案
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            if copiedCode == code { copiedCode = nil }
+                        }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: copiedCode == code ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 11, weight: .medium))
+                            Text(copiedCode == code ? "已复制" : "复制验证码 \(code)")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(copiedCode == code ? .green : .blue)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.blue.opacity(0.1), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 Text(formatTimestamp(msg.timestamp))
                     .font(.system(size: 11))
                     .foregroundColor(.appSecondary)
             }
             Spacer()
         }
+    }
+
+    // MARK: - Verification Code
+
+    @State private var copiedCode: String?
+
+    /// 从短信内容自动提取验证码：
+    /// 优先匹配"验证码/校验码/动态码/密码 + 4-8 位数字"模式；
+    /// 否则在含验证码语义的短信里取第一段独立 4-8 位数字（前后非数字）。
+    private func extractVerificationCode(from content: String) -> String? {
+        let keywords = ["验证码", "校验码", "动态码", "识别码", "确认码", "authorization", "code", "verifikasi"]
+        let lower = content.lowercased()
+        let hasKeyword = keywords.contains { lower.contains($0.lowercased()) }
+        guard hasKeyword else { return nil }
+
+        // 模式 1：关键词后（允许少量非数字字符间隔）紧跟 4-8 位数字
+        for kw in ["验证码", "校验码", "动态码", "识别码", "确认码"] {
+            if let range = content.range(of: kw) {
+                let after = content[range.upperBound...]
+                if let m = after.range(of: #"(?<!\d)(\d{4,8})(?!\d)"#, options: .regularExpression) {
+                    // 间隔不超过 6 个字符，避免匹配到别处的数字
+                    if m.lowerBound.utf16Offset(in: after) <= 6 {
+                        return String(content[m])
+                    }
+                }
+            }
+        }
+        // 模式 1b：英文 code 后的数字
+        if let range = lower.range(of: "code") {
+            let after = content[range.upperBound...]
+            if let m = after.range(of: #"(?<!\d)(\d{4,8})(?!\d)"#, options: .regularExpression) {
+                if m.lowerBound.utf16Offset(in: after) <= 8 {
+                    return String(content[m])
+                }
+            }
+        }
+        // 模式 2：短信里第一段独立 4-8 位数字（不含分隔符的纯数字段）
+        if let m = content.range(of: #"(?<!\d)(\d{4,8})(?!\d)"#, options: .regularExpression) {
+            return String(content[m])
+        }
+        return nil
     }
 
     // MARK: - Toolbar

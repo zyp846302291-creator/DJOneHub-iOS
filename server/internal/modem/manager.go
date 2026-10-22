@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf16"
 
@@ -69,11 +70,12 @@ type Manager struct {
 	// 资源池
 	reqPool sync.Pool
 
-	// 状态
-	running  bool
+	// 状态（running/healthy 使用 atomic：跨 goroutine 读写，Stop 可由
+	// 串口错误、watchdog、HTTP 请求等多个上下文触发）
+	running  atomic.Bool
 	busy     bool
 	busyMu   sync.Mutex
-	healthy  bool
+	healthy  atomic.Bool
 	eofCount int // readLoop 中连续 EOF 计数，用于检测设备断开
 
 	atTimeoutMu     sync.Mutex
@@ -116,6 +118,7 @@ type Manager struct {
 	hangupCallback  func()              // NO CARRIER URC 回调 (对方挂断)
 	connectCallback func()              // CONNECT/OK URC 回调 (对方接听外呼)
 	qpcmvChan       chan int            // +QPCMV URC 流控通道 (0=忙, 1=就绪)
+	qpcmvMu         sync.Mutex          // 保护 qpcmvChan 懒初始化与读取的竞态
 
 	reassembler *smscodec.Reassembler
 
@@ -125,6 +128,9 @@ type Manager struct {
 
 	// USSD 会话通道：当有协程在等待 USSD 响应时，+CUSD URC 会被投递到此通道
 	ussdChan chan USSDResult
+	// ussdMu 串行化 USSD 会话：防止并发调用时共享 usdChan 互偷结果、
+	// 交错发送 AT+CUSD=2 取消对方会话（对齐 QMI 后端的 usdMu 设计）
+	ussdMu sync.Mutex
 
 	// RDY 事件订阅（模组重启后广播）
 	rdyMu   sync.Mutex
@@ -168,7 +174,6 @@ func New(cfg config.DeviceConfig) (*Manager, error) {
 		rxChan:       make(chan rxMsg, 100),
 		triggerChan:  make(chan struct{}, 1),
 		ready:        make(chan struct{}),
-		healthy:      true,
 		reassembler:  smscodec.NewReassembler(),
 		ussdChan:     make(chan USSDResult, 1),
 		apduSessions: make(map[int]apduSessionInfo),
@@ -195,6 +200,9 @@ func New(cfg config.DeviceConfig) (*Manager, error) {
 	m.portMode = &serial.Mode{
 		BaudRate: 115200,
 	}
+
+	// 初始健康状态（atomic.Bool 零值为 false，需显式置位）
+	m.healthy.Store(true)
 
 	return m, nil
 }
@@ -224,7 +232,15 @@ func (m *Manager) forceReleasePort(portPath string) {
 	}
 
 	// 先查询占用进程，再排除当前进程(及其线程)后定向释放，避免误杀自身。
-	out, _ := exec.Command("fuser", portPath).CombinedOutput()
+	// fuser 是 Linux 工具，macOS 默认不存在；带超时防止异常设备节点挂死启动链路。
+	fuserCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(fuserCtx, "fuser", portPath).CombinedOutput()
+	if err != nil {
+		// fuser 不存在（macOS）或调用失败/超时：跳过检测，不阻塞启动
+		logger.Debug(fmt.Sprintf("[%s] fuser 不可用或执行失败，跳过端口占用检测", m.cfg.ID), "err", err.Error())
+		return
+	}
 	if len(out) == 0 {
 		return
 	}
@@ -354,6 +370,8 @@ func (m *Manager) SetHangupCallback(fn func()) {
 
 // GetQPCMVChan 获取 +QPCMV URC 流控通道 (0=模块忙, 1=就绪)
 func (m *Manager) GetQPCMVChan() <-chan int {
+	m.qpcmvMu.Lock()
+	defer m.qpcmvMu.Unlock()
 	if m.qpcmvChan == nil {
 		m.qpcmvChan = make(chan int, 4)
 	}
@@ -371,8 +389,51 @@ func (m *Manager) AnswerCall() error {
 	return nil
 }
 
+// sanitizeDialNumber 校验拨号字符串：仅允许数字与 + * # , ; W T P P ! 等标准
+// DTMF/拨号修饰字符。防止经 ATD 注入 "\r\n" 等换行序列执行任意 AT 指令。
+func sanitizeDialNumber(number string) (string, bool) {
+	number = strings.TrimSpace(number)
+	if number == "" || len(number) > 32 {
+		return "", false
+	}
+	for _, r := range number {
+		switch {
+		case r >= '0' && r <= '9':
+		case r == '+' || r == '*' || r == '#' || r == ',' || r == ';':
+		case r == 'W' || r == 'T' || r == 'P' || r == '!' || r == 'w' || r == 't' || r == 'p':
+		default:
+			return "", false
+		}
+	}
+	return number, true
+}
+
+// sanitizeUSSDCode 校验 USSD 码：仅允许数字与 * # A-D 等标准 USSD 字符，
+// 防止经 AT+CUSD 注入换行序列执行任意 AT 指令。
+func sanitizeUSSDCode(code string) (string, bool) {
+	code = strings.TrimSpace(code)
+	if code == "" || len(code) > 64 {
+		return "", false
+	}
+	for _, r := range code {
+		switch {
+		case r >= '0' && r <= '9':
+		case r == '*' || r == '#':
+		case (r >= 'a' && r <= 'd') || (r >= 'A' && r <= 'D'):
+		default:
+			return "", false
+		}
+	}
+	return code, true
+}
+
 // DialCall 发起语音外呼 (ATD<number>;)
 func (m *Manager) DialCall(number string) error {
+	safe, ok := sanitizeDialNumber(number)
+	if !ok {
+		return fmt.Errorf("无效的拨号号码: %q", number)
+	}
+	number = safe
 	cmd := fmt.Sprintf("ATD%s;", number)
 	_, err := m.ExecuteAT(cmd, 60*time.Second)
 	if err != nil {
@@ -438,7 +499,7 @@ func (m *Manager) recordATTimeout(req commandRequest) (int, bool) {
 }
 
 func (m *Manager) tripATTimeoutWatchdog(cmd string, failures int) {
-	if !m.running {
+	if !m.running.Load() {
 		return
 	}
 	logger.Warn(fmt.Sprintf("[%s] AT 连续超时达到阈值，触发控制面恢复", m.cfg.ID),
@@ -446,7 +507,7 @@ func (m *Manager) tripATTimeoutWatchdog(cmd string, failures int) {
 		"port", m.atPort,
 		"failures", failures,
 		"threshold", atTimeoutWatchdogThreshold)
-	m.healthy = false
+	m.healthy.Store(false)
 	m.Stop()
 	m.notifyDisconnect("at_timeout_threshold")
 }
@@ -455,7 +516,7 @@ func (m *Manager) tripATTimeoutWatchdog(cmd string, failures int) {
 func (m *Manager) Start() error {
 	if m.pureQMIBackend() {
 		logger.Info(fmt.Sprintf("[%s] 纯 QMI 模式，跳过 AT 管理器启动", m.cfg.ID), "at_port", m.atPort)
-		m.running = false
+		m.running.Store(false)
 		m.markReady()
 		return nil
 	}
@@ -482,7 +543,7 @@ func (m *Manager) Start() error {
 	}
 
 	m.port.SetReadTimeout(100 * time.Millisecond)
-	m.running = true
+	m.running.Store(true)
 
 	// 启动读取协程
 	m.loopWG.Add(1)
@@ -542,12 +603,12 @@ func (m *Manager) handleFatalSerialRuntimeErr(err error, phase string, cmd strin
 	if !isFatalSerialRuntimeErr(err) {
 		return
 	}
-	if !m.running {
+	if !m.running.Load() {
 		return
 	}
 	logger.Warn(fmt.Sprintf("[%s] AT 串口运行期失效，触发恢复", m.cfg.ID),
 		"phase", phase, "cmd", cmd, "port", m.atPort, "err", err)
-	m.healthy = false
+	m.healthy.Store(false)
 	m.Stop()
 	m.notifyDisconnect("serial_runtime_error")
 }
@@ -560,7 +621,7 @@ func (m *Manager) Stop() {
 		if m.port != nil {
 			m.port.Close()
 		}
-		m.running = false
+		m.running.Store(false)
 	})
 }
 
@@ -767,7 +828,11 @@ func (m *Manager) readLoop() {
 						return
 					default:
 						logger.Warn(fmt.Sprintf("[%s] 串口连续 %d 次 EOF，判定设备已断开", m.cfg.ID, m.eofCount))
-						m.rxChan <- rxMsg{Err: fmt.Errorf("连续 %d 次 EOF，判定设备已断开", m.eofCount)}
+						// select 旁路：Stop() 竞态下 rxChan 可能无人消费，避免永久阻塞
+						select {
+						case m.rxChan <- rxMsg{Err: fmt.Errorf("连续 %d 次 EOF，判定设备已断开", m.eofCount)}:
+						case <-m.stop:
+						}
 						return
 					}
 				}
@@ -780,7 +845,10 @@ func (m *Manager) readLoop() {
 			case <-m.stop:
 				return
 			default:
-				m.rxChan <- rxMsg{Err: err}
+				select {
+				case m.rxChan <- rxMsg{Err: err}:
+				case <-m.stop:
+				}
 				return
 			}
 		}
@@ -1436,9 +1504,12 @@ func (m *Manager) handleURC(line string) {
 	if fr.Key == "+QPCMV" {
 		rest := parseURCAfterColon(s)
 		if v, ok := parseInt(strings.TrimSpace(rest)); ok {
-			if m.qpcmvChan != nil {
+			m.qpcmvMu.Lock()
+			ch := m.qpcmvChan
+			m.qpcmvMu.Unlock()
+			if ch != nil {
 				select {
-				case m.qpcmvChan <- v:
+				case ch <- v:
 				default:
 				}
 			}
@@ -1508,7 +1579,10 @@ func (m *Manager) readAndProcessSMSFromStorage(storage, index string) {
 	// 如果内容为空（说明是分片且未完成），则不进行回调
 	if content == "" {
 		// 删除已读分片 (非常重要，否则SIM卡满了)
-		m.ExecuteAT("AT+CMGD="+index, 3*time.Second)
+		if _, err := m.ExecuteAT("AT+CMGD="+index, 3*time.Second); err != nil {
+			// 删除失败必须记录：SIM 存储塞满后新短信将无法入库
+			logger.Warn(fmt.Sprintf("[%s] 删除已读短信分片失败，SIM 存储可能逐渐塞满", m.cfg.ID), "index", index, "err", err.Error())
+		}
 		return
 	}
 
@@ -1520,7 +1594,9 @@ func (m *Manager) readAndProcessSMSFromStorage(storage, index string) {
 	}
 
 	// 删除已读短信
-	m.ExecuteAT("AT+CMGD="+index, 3*time.Second)
+	if _, err := m.ExecuteAT("AT+CMGD="+index, 3*time.Second); err != nil {
+		logger.Warn(fmt.Sprintf("[%s] 删除已读短信失败，SIM 存储可能逐渐塞满", m.cfg.ID), "index", index, "err", err.Error())
+	}
 }
 
 func normalizeSMSIndex(index string) (string, bool) {
@@ -1703,7 +1779,7 @@ func (m *Manager) executeAT(cmd string, timeout time.Duration, silent, highPrior
 	if !m.CanExecuteAT() {
 		return "", errors.New("AT 管理器未启动或不可用")
 	}
-	if !m.healthy {
+	if !m.healthy.Load() {
 		return "", errors.New("设备异常")
 	}
 
@@ -1778,7 +1854,7 @@ func (m *Manager) IsBusy() bool {
 
 // IsHealthy 返回健康状态
 func (m *Manager) IsHealthy() bool {
-	return m.healthy && m.running
+	return m.healthy.Load() && m.running.Load()
 }
 
 // HasATPort 返回当前管理器是否配置了可用的 AT 端口。
@@ -1793,7 +1869,7 @@ func (m *Manager) ATPort() string {
 
 // CanExecuteAT 返回当前管理器是否已启动，可接受 AT 命令。
 func (m *Manager) CanExecuteAT() bool {
-	return !m.pureQMIBackend() && m.HasATPort() && m.running
+	return !m.pureQMIBackend() && m.HasATPort() && m.running.Load()
 }
 
 func (m *Manager) SetAPDUArbiter(arbiter *apduarbiter.Arbiter) {
@@ -2127,6 +2203,16 @@ func (m *Manager) decodeUSSDText(raw string, dcs int) string {
 // command: USSD 代码，如 "*100#", "*135#"
 // timeout: 等待 URC 响应的超时时间
 func (m *Manager) ExecuteUSSD(command string, timeout time.Duration) (*USSDResult, error) {
+	m.ussdMu.Lock()
+	defer m.ussdMu.Unlock()
+
+	// 输入校验：防止 USSD 码注入 AT 指令
+	safeCode, ok := sanitizeUSSDCode(command)
+	if !ok {
+		return nil, fmt.Errorf("无效的 USSD 码: %q", command)
+	}
+	command = safeCode
+
 	// 清空可能残留的旧结果
 	select {
 	case <-m.ussdChan:

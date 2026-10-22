@@ -22,8 +22,8 @@ func newRunningTestManager(t *testing.T) *Manager {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	m.running = true
-	m.healthy = true
+	m.running.Store(true)
+	m.healthy.Store(true)
 	return m
 }
 

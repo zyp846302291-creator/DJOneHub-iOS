@@ -178,6 +178,16 @@ class SignalingClient: NSObject {
         send(type: "history_clear", payload: payload)
     }
 
+    /// 向 proxy 上报推送凭证（与 PushKitManager 注册 Worker 的同一对 device_id/secret）。
+    /// 每次 WebSocket 连接成功后自动调用。
+    func sendPushCredentials() {
+        let d1 = UserDefaults.standard.string(forKey: "push_device_id")
+        let d2 = UserDefaults.standard.string(forKey: "push_device_secret")
+        guard let deviceID = d1, let secret = d2, !deviceID.isEmpty, !secret.isEmpty else { return }
+        let payload = try? JSONEncoder().encode(["device_id": deviceID, "device_secret": secret])
+        send(type: "push_credentials", payload: payload)
+    }
+
     /// Send mic audio data (s16le PCM) as binary WebSocket frame
     func sendAudioData(_ data: Data) {
         guard isConnected else { return }
@@ -244,10 +254,10 @@ class SignalingClient: NSObject {
                let state = try? JSONDecoder().decode(CallStatePush.self, from: payloadData) {
                 lastCallState = state
 
-                // Detect incoming call
+                // Detect incoming call（兼容 server 状态值：incoming / waiting / ringing）
                 if let active = state.active,
                    active.direction == "incoming",
-                   (active.state == "incoming" || active.state == "waiting") {
+                   (active.state == "incoming" || active.state == "waiting" || active.state == "ringing") {
                     delegate?.signalingDidReceiveIncomingCall(self, call: active)
                 }
 
@@ -275,8 +285,12 @@ class SignalingClient: NSObject {
     }
 
     private func handleDisconnect(error: Error?) {
-        guard isConnected else { return }
-        isConnected = false
+        // 无论之前是否连接成功（isConnected），断开都要安排重连：
+        // 首次连接失败时 isConnected 仍为 false，旧逻辑会直接 return，
+        // 导致 Mac 不在线时 App 停留后台永不重试。
+        if isConnected {
+            isConnected = false
+        }
         // Do NOT stop keepAlive here — keep app alive in background so reconnect works
         delegate?.signalingDidDisconnect(self, error: error)
         scheduleReconnect()
@@ -299,6 +313,9 @@ extension SignalingClient: URLSessionWebSocketDelegate {
         keepAlive.start()
         print("[Signaling] connected to \(serverURL)")
         delegate?.signalingDidConnect(self)
+        // 连接建立后把推送凭证发给 proxy：Mac 侧收到来电且 iPhone 不在线时，
+        // proxy 用它触发 Cloudflare Worker → APNs VoIP push。
+        sendPushCredentials()
     }
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,

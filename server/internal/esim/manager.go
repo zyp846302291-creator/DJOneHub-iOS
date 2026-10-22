@@ -282,6 +282,8 @@ type Manager struct {
 	cacheMu                     sync.RWMutex   // 保护 chipInfoCache、overviewCache 与 discoveredEUICCs 等快照状态
 	opMu                        sync.Mutex     // eSIM 硬件操作互斥（同时只允许一个写操作）
 	opDone                      chan struct{}  // 写操作完成通知（替代 TryLock+Sleep 轮询）
+	opDoneMu                    sync.Mutex     // 保护 opDone 的替换与关闭（防 double-close panic 与 data race）
+	scanMu                      sync.Mutex     // 串行化 eUICC AID 扫描（preCleanChannels 互踩保护）
 	chipInfoCache               *EUICCChipInfo // 芯片信息缓存（硬件信息基本不变）
 	overviewCache               *EsimOverview  // eSIM 总览缓存（跟随 Manager / Worker 实例）
 	overviewLastErr             error
@@ -831,11 +833,17 @@ func (m *Manager) forEachEUICC(fn func(client *lpa.Client, aid []byte, eidStr st
 			"wait_ms", time.Since(apduWaitStarted).Milliseconds())
 		return ErrOperationInProgress
 	}
-	if waited := time.Since(apduWaitStarted); waited > 100*time.Millisecond {
+		if waited := time.Since(apduWaitStarted); waited > 100*time.Millisecond {
 		logger.Debug("eSIM 读操作已等待 APDU 仲裁空闲",
 			"device", m.deviceID,
 			"wait_ms", waited.Milliseconds())
 	}
+
+	// 读扫描互斥：preCleanChannels 的 ClearLogicalChannels 会关闭通道 1-4，
+	// 若两个读操作并发扫描会互相关闭对方 LPA client 正在使用的逻辑通道，
+	// 导致 AID 扫描随机失败。此处串行化整个扫描序列。
+	m.scanMu.Lock()
+	defer m.scanMu.Unlock()
 
 	m.preCleanChannels()
 
@@ -875,8 +883,11 @@ func (m *Manager) waitForNoWriteOperation() error {
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	for {
+		m.opDoneMu.Lock()
+		done := m.opDone
+		m.opDoneMu.Unlock()
 		select {
-		case <-m.opDone:
+		case <-done:
 			// 写操作已发出完成通知，尝试确认锁已释放
 			if m.opMu.TryLock() {
 				m.opMu.Unlock()
@@ -899,7 +910,9 @@ func (m *Manager) acquireOperationLock() error {
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	for {
+		m.opDoneMu.Lock()
 		done := m.opDone
+		m.opDoneMu.Unlock()
 		if done == nil {
 			done = make(chan struct{})
 		}
@@ -929,7 +942,10 @@ func (m *Manager) lockOperation(operation string) (func(), error) {
 // notifyWriteDone 通知所有等待写操作完成的读方。
 // 必须在 opMu.Unlock() 之后立即调用。
 func (m *Manager) notifyWriteDone() {
-	// 关闭旧 channel（广播通知），并新建一个供下次写操作使用
+	// 关闭旧 channel（广播通知），并新建一个供下次写操作使用。
+	// opDoneMu 保护替换+关闭序列，防止并发写操作交错时 double-close panic。
+	m.opDoneMu.Lock()
+	defer m.opDoneMu.Unlock()
 	old := m.opDone
 	m.opDone = make(chan struct{})
 	if old != nil {

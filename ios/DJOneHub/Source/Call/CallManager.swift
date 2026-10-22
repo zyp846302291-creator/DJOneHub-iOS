@@ -12,6 +12,8 @@ class CallManager: ObservableObject {
     @Published var moduleInfo: ModuleInfo?
     @Published var lastError: String?
 
+    var demoMode: Bool = false
+
     let signaling: SignalingClient
     let callKit: CallKitManager
     let audioReceiver = AudioReceiver()
@@ -19,6 +21,9 @@ class CallManager: ObservableObject {
     // Track whether this device initiated the current call
     private var localInitiated = false
     private var isHangingUp = false
+    /// 挂断后等待服务器确认的兜底定时器：超时后强制复位 isHangingUp，
+    /// 避免服务器无响应（断线）时永远屏蔽来电 CallKit 上报。
+    private var hangupWatchdog: Timer?
     private var pendingOutgoingNumber: String?
     // Track if CallKit "connected" has been reported for current call
     private var callReportedConnected = false
@@ -34,6 +39,14 @@ class CallManager: ObservableObject {
         self.signaling.delegate = self
         self.callKit.delegate = self
 
+        // VoIP push 到达时由 PushKitManager 同步上报 CallKit（Apple 规范：
+        // 必须在 PushKit completion 之前调用 reportNewIncomingCall）
+        PushKitManager.shared.callKitReporter = { [weak self] caller, uuid in
+            guard let self = self else { return }
+            self.signaling.keepAlive.stop()
+            self.callKit.reportIncomingCall(number: caller, uuid: uuid)
+        }
+
         // Wire audio frames from WebSocket to AudioReceiver
         self.signaling.onAudioFrame = { [weak self] data in
             self?.audioReceiver.handleAudioFrame(data)
@@ -46,10 +59,26 @@ class CallManager: ObservableObject {
     }
 
     func connect() {
+        if demoMode {
+            // Demo mode: simulate connected state with mock data
+            DispatchQueue.main.async {
+                self.isConnected = true
+                self.hasConnectedOnce = true
+                self.lastError = nil
+                self.moduleInfo = ModuleInfo(operator_name: "中国联通", signal_dbm: -69, network_mode: "LTE", sim_inserted: true)
+                self.callHistory = [
+                    CallInfo(id: "demo-1", direction: "outgoing", state: "ended", number: "10086", started_at: "2026-10-17 09:15", missed: false),
+                    CallInfo(id: "demo-2", direction: "incoming", state: "ended", number: "13800138000", started_at: "2026-10-16 18:42", missed: false),
+                    CallInfo(id: "demo-3", direction: "incoming", state: "ended", number: "10010", started_at: "2026-10-16 09:30", missed: true)
+                ]
+            }
+            return
+        }
         signaling.connect()
     }
 
     func disconnect() {
+        if demoMode { return }
         signaling.disconnect()
     }
 
@@ -65,15 +94,29 @@ class CallManager: ObservableObject {
         let localCall = CallInfo(id: "local-\(UUID().uuidString)",
                                  direction: "outgoing", state: "dialing",
                                  number: number, started_at: nil, missed: nil)
-        // Register with CallKit — this will trigger didActivate → startEngine
-        callKit.reportOutgoingCall(number: number)
+
+        if !demoMode {
+            callKit.reportOutgoingCall(number: number)
+        }
 
         DispatchQueue.main.async {
             self.activeCall = localCall
-            // Don't start audio here — CallKit will call didActivate → startEngine
         }
 
-        signaling.dial(number: number)
+        if demoMode {
+            // Demo mode: simulate call connecting after 2 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                guard let self, self.activeCall != nil else { return }
+                self.activeCall = CallInfo(id: localCall.id, direction: "outgoing", state: "active",
+                                           number: number, started_at: nil, missed: nil)
+                self.callConnectTime = Date()
+                self.callDurationTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                    DispatchQueue.main.async { self?.objectWillChange.send() }
+                }
+            }
+        } else {
+            signaling.dial(number: number)
+        }
     }
 
     func answer() {
@@ -87,41 +130,65 @@ class CallManager: ObservableObject {
         // Immediately clear call UI and block server state until confirmed ended
         localInitiated = false
         isHangingUp = true
-        // Report call ended to CallKit for native call log
-        callKit.endCall()
+        startHangupWatchdog()
+        if !demoMode {
+            callKit.endCall()
+        }
         stopCallTimer()
         DispatchQueue.main.async {
             self.activeCall = nil
             self.audioReceiver.isMuted = false // 新通话默认不静音
         }
-        signaling.hangup()
+        if !demoMode {
+            signaling.hangup()
+        }
+    }
+
+    /// 挂断兜底：8 秒内未收到服务器 ended 确认则强制复位，恢复来电处理
+    private func startHangupWatchdog() {
+        hangupWatchdog?.invalidate()
+        hangupWatchdog = Timer.scheduledTimer(withTimeInterval: 8.0, repeats: false) { [weak self] _ in
+            guard let self = self, self.isHangingUp else { return }
+            print("[CallManager] hangup confirm timeout — resetting isHangingUp")
+            self.isHangingUp = false
+        }
     }
 
     func reject() {
-        signaling.reject()
+        if !demoMode {
+            signaling.reject()
+        }
         // callKit.endCall()
     }
 
     func sendDTMF(digit: String) {
-        signaling.sendDTMF(digit: digit)
+        if !demoMode {
+            signaling.sendDTMF(digit: digit)
+        }
     }
 
     func toggleMute(muted: Bool) {
         audioReceiver.isMuted = muted
-        signaling.toggleMute(muted: muted)
+        if !demoMode {
+            signaling.toggleMute(muted: muted)
+        }
     }
 
     /// 清空全部通话记录（本地 + 服务器）
     func clearHistory() {
         callHistory = []
-        signaling.clearHistory()
+        if !demoMode {
+            signaling.clearHistory()
+        }
     }
 
     /// 删除单条通话记录（本地 + 服务器）
     func removeHistory(id: String?) {
         guard let id else { return }
         callHistory.removeAll { $0.id == id }
-        signaling.clearHistory(id: id)
+        if !demoMode {
+            signaling.clearHistory(id: id)
+        }
     }
 }
 
@@ -159,6 +226,8 @@ extension CallManager: SignalingClientDelegate {
             if self.isHangingUp {
                 if state.active == nil {
                     self.isHangingUp = false
+                    self.hangupWatchdog?.invalidate()
+                    self.hangupWatchdog = nil
                 }
                 if let history = state.history { self.callHistory = history }
                 if let module = state.module { self.moduleInfo = module }
@@ -166,11 +235,11 @@ extension CallManager: SignalingClientDelegate {
             }
 
             let wasActive = self.activeCall != nil
-            let wasCallActive = self.callConnectTime != nil
 
             if let serverActive = state.active {
+                // 兼容 server 状态值：incoming / waiting / ringing 均视为来电振铃
                 let isNewIncoming = serverActive.direction == "incoming"
-                    && (serverActive.state == "incoming" || serverActive.state == "waiting")
+                    && (serverActive.state == "incoming" || serverActive.state == "waiting" || serverActive.state == "ringing")
                     && self.activeCall?.id != serverActive.id
 
                 self.activeCall = serverActive

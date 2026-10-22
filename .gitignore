@@ -32,3 +32,9 @@ capture_audio_bin/
 # Editor
 .vscode/
 .idea/
+proxy/djonehub-remote
+*.DS_Store
+xcuserdata/
+.workbuddy/
+ios/DJOneHub.xcodeproj/project.xcworkspace/xcuserdata/
+ios/DJOneHub.xcodeproj/xcuserdata/

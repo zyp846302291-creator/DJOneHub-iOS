@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DJOneHub — 让 DJI 4G 模块成为 iPhone 的实体 SIM 终端</title>
+<style>
+:root {
+  --bg: #060a14;
+  --bg2: #0a1122;
+  --ink: #e8eefc;
+  --dim: #8b9bb8;
+  --acc: #35f0a8;
+  --acc2: #3aa0ff;
+  --acc3: #b16bff;
+  --line: rgba(139,155,184,.16);
+  --glass: rgba(255,255,255,.05);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "SF Pro SC", "PingFang SC", "Segoe UI", "Microsoft YaHei", sans-serif;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+::selection { background: var(--acc); color: #04120c; }
+
+#bg-canvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
+.orb { position:fixed; border-radius:50%; filter:blur(120px); opacity:.32; z-index:0; pointer-events:none; }
+.orb1 { width:560px; height:560px; background:var(--acc); top:-180px; left:-120px; animation: drift1 16s ease-in-out infinite alternate; }
+.orb2 { width:460px; height:460px; background:var(--acc2); top:30%; right:-160px; animation: drift2 20s ease-in-out infinite alternate; }
+.orb3 { width:380px; height:380px; background:var(--acc3); bottom:-120px; left:30%; animation: drift3 18s ease-in-out infinite alternate; }
+@keyframes drift1 { to { transform: translate(120px,80px) scale(1.15); } }
+@keyframes drift2 { to { transform: translate(-100px,-120px) scale(.9); } }
+@keyframes drift3 { to { transform: translate(80px,-90px) scale(1.1); } }
+
+.wrap { position:relative; z-index:2; max-width:1120px; margin:0 auto; padding:0 28px; }
+
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  background: rgba(6,10,20,.62);
+  border-bottom: 1px solid var(--line);
+}
+.nav-in { max-width:1120px; margin:0 auto; padding:14px 28px; display:flex; align-items:center; gap:26px; }
+.logo { display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px; letter-spacing:.5px; }
+.logo-dot { width:12px; height:12px; border-radius:4px; background:linear-gradient(135deg,var(--acc),var(--acc2)); box-shadow:0 0 14px var(--acc); animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{ box-shadow:0 0 8px var(--acc);} 50%{ box-shadow:0 0 22px var(--acc);} }
+nav a { color:var(--dim); text-decoration:none; font-size:14.5px; transition:color .2s; }
+nav a:hover { color:var(--ink); }
+.nav-cta { margin-left:auto; background:linear-gradient(135deg,var(--acc),#1fd68e); color:#04120c; padding:8px 18px; border-radius:999px; font-weight:600; font-size:14px; }
+.nav-cta:hover { transform:translateY(-1px); color:#04120c; }
+
+/* ===== Hero ===== */
+header { min-height:96vh; display:flex; align-items:center; position:relative; padding:130px 0 60px; }
+.hero-grid { display:grid; grid-template-columns: 1fr 1fr; gap:56px; align-items:center; }
+.tag { display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--acc); border:1px solid rgba(53,240,168,.35); background:rgba(53,240,168,.08); padding:6px 14px; border-radius:999px; margin-bottom:22px; }
+.tag::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--acc); animation:pulse 1.8s infinite; }
+h1 { font-size: clamp(36px, 5vw, 58px); line-height:1.12; font-weight:800; letter-spacing:-1px; }
+h1 .grad { background:linear-gradient(100deg,var(--acc) 5%,var(--acc2) 55%,var(--acc3) 95%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.hero-sub { margin-top:22px; color:var(--dim); font-size:17px; max-width:540px; }
+.hero-sub b { color:var(--ink); font-weight:600; }
+.hero-btns { display:flex; gap:14px; margin-top:32px; flex-wrap:wrap; }
+.btn { padding:13px 26px; border-radius:14px; font-size:15.5px; font-weight:600; text-decoration:none; transition: all .25s; display:inline-flex; align-items:center; gap:8px; }
+.btn-p { background:linear-gradient(135deg,var(--acc),#1fd68e); color:#04120c; box-shadow:0 8px 30px rgba(53,240,168,.3); }
+.btn-p:hover { transform:translateY(-3px); box-shadow:0 14px 40px rgba(53,240,168,.45); color:#04120c; }
+.btn-g { border:1px solid var(--line); color:var(--ink); background:var(--glass); }
+.btn-g:hover { border-color:var(--acc); transform:translateY(-3px); }
+.hero-stats { display:flex; gap:36px; margin-top:40px; flex-wrap:wrap; }
+.stat b { font-size:24px; font-weight:800; }
+.stat span { display:block; color:var(--dim); font-size:13px; margin-top:2px; }
+.stat b em { font-style:normal; color:var(--acc); }
+
+/* Hero 真实截图（轮播） */
+.shot-stage { position:relative; perspective:1400px; }
+.shot-frame {
+  border-radius:22px; overflow:hidden;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow: 0 34px 80px rgba(0,0,0,.55), 0 0 0 6px rgba(255,255,255,.03);
+  animation: shotFloat 7s ease-in-out infinite;
+  transform-style:preserve-3d;
+  position:relative;
+  background:#0c1322;
+}
+@keyframes shotFloat { 0%,100%{ transform: rotateY(-5deg) rotateX(2deg) translateY(0);} 50%{ transform: rotateY(3deg) rotateX(0) translateY(-14px);} }
+.shot-frame img { display:block; width:100%; height:auto; }
+.shot-cap {
+  position:absolute; left:14px; bottom:14px; z-index:5;
+  background:rgba(6,10,20,.82); backdrop-filter:blur(10px);
+  border:1px solid var(--line); border-radius:12px;
+  padding:8px 14px; font-size:12.5px; color:var(--ink);
+}
+.shot-cap b { color:var(--acc); }
+.shot-dots { display:flex; gap:8px; justify-content:center; margin-top:18px; }
+.shot-dots i { width:22px; height:4px; border-radius:99px; background:var(--line); transition:all .3s; cursor:pointer; }
+.shot-dots i.on { background:var(--acc); width:34px; box-shadow:0 0 10px rgba(53,240,168,.5); }
+.badge-fly { position:absolute; z-index:6; background:rgba(10,16,30,.9); border:1px solid var(--line); border-radius:12px; padding:9px 14px; font-size:12px; color:var(--ink); backdrop-filter:blur(8px); box-shadow:0 12px 30px rgba(0,0,0,.5); }
+.bf1 { top:-18px; right:-14px; animation: floaty2 5s ease-in-out infinite; }
+.bf2 { bottom:34px; left:-26px; animation: floaty2 6.4s ease-in-out infinite .8s; }
+@keyframes floaty2 { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-12px);} }
+.bf-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:7px; }
+.bf1 .bf-dot { background:var(--acc); } .bf2 .bf-dot { background:var(--acc2); }
+.bf small { display:block; color:var(--dim); font-size:10.5px; }
+
+section { padding:104px 0; position:relative; }
+.sec-head { text-align:center; max-width:680px; margin:0 auto 60px; }
+.sec-head h2 { font-size: clamp(30px,3.6vw,44px); font-weight:800; letter-spacing:-.5px; }
+.sec-head p { color:var(--dim); margin-top:14px; font-size:16.5px; }
+
+/* ===== Duo 专属区 ===== */
+.duo-banner {
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  margin:0 auto 54px; width:fit-content;
+  background:linear-gradient(120deg, rgba(53,240,168,.1), rgba(58,160,255,.1));
+  border:1px solid rgba(53,240,168,.3);
+  border-radius:999px; padding:10px 24px; font-size:14.5px;
+}
+.duo-banner i { font-style:normal; font-size:18px; }
+.duo-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:24px; }
+.duo-card {
+  background:var(--glass); border:1px solid var(--line); border-radius:22px;
+  padding:18px; transition:all .4s; position:relative; overflow:hidden;
+}
+.duo-card:hover { transform:translateY(-8px) rotate(-.4deg); border-color:rgba(53,240,168,.45); box-shadow:0 22px 60px rgba(53,240,168,.12); }
+.duo-card img { width:100%; border-radius:14px; display:block; border:1px solid rgba(255,255,255,.08); }
+.duo-card h3 { font-size:16.5px; margin:14px 2px 6px; display:flex; align-items:center; gap:8px; }
+.duo-card h3 .chip { font-size:10.5px; font-weight:700; color:var(--acc); border:1px solid rgba(53,240,168,.4); border-radius:99px; padding:2px 9px; letter-spacing:.5px; }
+.duo-card p { color:var(--dim); font-size:13.5px; padding:0 2px; }
+
+/* ===== 架构 ===== */
+.chain { display:flex; align-items:center; justify-content:space-between; margin-top:20px; }
+.node { flex:1; max-width:190px; background:var(--glass); border:1px solid var(--line); border-radius:18px; padding:22px 16px; text-align:center; transition: all .3s; }
+.node:hover { transform:translateY(-6px); border-color:var(--acc); box-shadow:0 16px 40px rgba(53,240,168,.14); }
+.node i { font-style:normal; font-size:30px; display:block; margin-bottom:10px; }
+.node b { font-size:15px; display:block; }
+.node small { color:var(--dim); font-size:12px; }
+.flow { flex:1; height:2px; background:var(--line); position:relative; overflow:hidden; min-width:36px; margin:0 6px; top:-4px; }
+.flow::after { content:''; position:absolute; top:0; left:-40%; width:40%; height:100%; background:linear-gradient(90deg,transparent,var(--acc),transparent); animation: flowmove 1.8s linear infinite; }
+@keyframes flowmove { to { left:110%; } }
+
+/* ===== 功能 ===== */
+.feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+.feat { background:var(--glass); border:1px solid var(--line); border-radius:20px; padding:28px 24px; transition:all .35s; position:relative; overflow:hidden; }
+.feat::before { content:''; position:absolute; inset:0; background:radial-gradient(600px circle at var(--mx,50%) var(--my,50%), rgba(53,240,168,.09), transparent 42%); opacity:0; transition:opacity .3s; }
+.feat:hover::before { opacity:1; }
+.feat:hover { transform:translateY(-6px); border-color:rgba(53,240,168,.4); }
+.feat i { font-style:normal; font-size:32px; }
+.feat h3 { font-size:17.5px; margin:14px 0 8px; }
+.feat p { color:var(--dim); font-size:14px; }
+
+/* ===== 步骤 ===== */
+.steps { max-width:760px; margin:0 auto; position:relative; }
+.steps::before { content:''; position:absolute; left:19px; top:8px; bottom:8px; width:2px; background:linear-gradient(180deg,var(--acc),var(--acc2),var(--acc3)); opacity:.5; }
+.step { display:flex; gap:26px; padding:22px 0; }
+.step-n { width:40px; height:40px; border-radius:13px; background:var(--bg2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--acc); flex-shrink:0; z-index:2; transition:all .3s; }
+.step:hover .step-n { background:var(--acc); color:#04120c; box-shadow:0 0 24px rgba(53,240,168,.5); }
+.step b { font-size:16.5px; }
+.step p { color:var(--dim); font-size:14.5px; margin-top:4px; }
+
+.cta-box { text-align:center; background:linear-gradient(140deg, rgba(53,240,168,.09), rgba(58,160,255,.07) 50%, rgba(177,107,255,.09)); border:1px solid rgba(53,240,168,.25); border-radius:28px; padding:70px 40px; position:relative; overflow:hidden; }
+.cta-box::before { content:''; position:absolute; top:-60%; left:-20%; width:70%; height:220%; background:conic-gradient(from 0deg, transparent, rgba(53,240,168,.16), transparent 30%); animation: sweep 7s linear infinite; }
+@keyframes sweep { to { transform: rotate(360deg); } }
+.cta-box h2 { font-size:clamp(28px,3.4vw,40px); font-weight:800; position:relative; }
+.cta-box p { color:var(--dim); margin:14px 0 30px; position:relative; }
+
+footer { border-top:1px solid var(--line); padding:36px 0; color:var(--dim); font-size:13.5px; text-align:center; }
+footer a { color:var(--ink); text-decoration:none; }
+
+.rv { opacity:0; transform:translateY(34px); transition:all .8s cubic-bezier(.2,.7,.2,1); }
+.rv.on { opacity:1; transform:none; }
+
+@media (max-width: 940px) {
+  .hero-grid { grid-template-columns:1fr; }
+  .shot-stage { order:-1; }
+  .feat-grid { grid-template-columns:1fr; }
+  .duo-grid { grid-template-columns:1fr; }
+  .chain { flex-direction:column; gap:14px; }
+  .flow { display:none; }
+  nav a:not(.nav-cta) { display:none; }
+  .bf2 { display:none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+
+<nav>
+  <div class="nav-in">
+    <div class="logo"><span class="logo-dot"></span>DJOneHub</div>
+    <a href="#duo">Duo 适配</a>
+    <a href="#feat">功能</a>
+    <a href="#chain">架构</a>
+    <a href="#quick">快速开始</a>
+    <a class="nav-cta" href="https://github.com/zyp846302291-creator/DJOneHub-iOS" target="_blank">GitHub ⭐</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<header>
+  <div class="hero-grid">
+    <div>
+      <span class="tag">开源 · v3.1 · iPhone Duo 折叠屏原生适配</span>
+      <h1>让 DJI 4G 模块<br>成为 iPhone 的<span class="grad">实体 SIM 终端</span></h1>
+      <p class="hero-sub">大疆第一代 4G 增强模块，插上 Mac 就变成<b>真正的电话卡</b>——iPhone 上打电话、收发短信、4G 联网、GPS 定位，<b>CallKit 系统级来电</b>，锁屏也能接。不修改模块固件。</p>
+      <div class="hero-btns">
+        <a class="btn btn-p" href="https://github.com/zyp846302291-creator/DJOneHub-iOS" target="_blank">⬇ 源码 · GitHub</a>
+        <a class="btn btn-g" href="#quick">快速开始 →</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><b><em data-count="4">0</em> 大能力</b><span>通话 / 短信 / eSIM / 定位</span></div>
+        <div class="stat"><b><em data-count="3">0</em> 端架构</b><span>iPhone · Go 代理 · Mac 主服务</span></div>
+        <div class="stat"><b><em data-count="4">0</em> 形态适配</b><span>折叠屏横竖 · 双栏/推入</span></div>
+      </div>
+    </div>
+
+    <div class="shot-stage rv on">
+      <div class="shot-frame">
+        <img id="heroImg" src="shots/s1.webp" alt="iPhone Duo 展开形态 · DJOneHub 真实界面">
+        <div class="shot-cap" id="heroCap"><b>iPhone Duo 展开</b> · 拨号双栏布局</div>
+      </div>
+      <div class="shot-dots" id="heroDots">
+        <i class="on" data-img="shots/s1.webp" data-cap="<b>iPhone Duo 展开</b> · 拨号双栏布局"></i>
+        <i data-img="shots/s2.webp" data-cap="<b>展开形态</b> · 信息 NavigationSplitView"></i>
+        <i data-img="shots/s3.webp" data-cap="<b>展开形态</b> · 原生 List 概览"></i>
+        <i data-img="shots/s4.webp" data-cap="<b>展开形态</b> · 更多与调试"></i>
+      </div>
+      <div class="badge-fly bf1"><span class="bf-dot"></span>真实 App 截图<small>iPhone Duo 模拟器 · Build 34</small></div>
+      <div class="badge-fly bf2"><span class="bf-dot"></span>折叠屏四形态<small>外屏 / 展开 · 竖 / 横</small></div>
+    </div>
+  </div>
+</header>
+
+<section id="duo">
+  <div class="sec-head rv">
+    <h2>为 iPhone Duo 折叠屏而生</h2>
+    <p>不只兼容——是按折叠屏的使用方式重新设计。外屏单手快拨，内屏双栏高效，官方 size class 判定，零私有 API。</p>
+  </div>
+  <div class="duo-banner rv"><i>📱</i>四种形态 · 一套代码 · iOS 26 官方折叠屏规范（27.1）合规</div>
+  <div class="duo-grid">
+    <div class="duo-card rv">
+      <img src="shots/s1.webp" alt="展开拨号双栏">
+      <h3>展开 · 拨号双栏 <span class="chip">REGULAR</span></h3>
+      <p>左侧「最近通话 | 联系人」选项卡（未接红点角标），右侧全尺寸拨号键盘——左查右拨，一屏完成。</p>
+    </div>
+    <div class="duo-card rv" style="transition-delay:.08s">
+      <img src="shots/s2.webp" alt="信息双栏">
+      <h3>展开 · 信息双栏 <span class="chip">SPLIT VIEW</span></h3>
+      <p>会话列表与短信内容 NavigationSplitView 并排，行首未读蓝点、侧滑标未读，与原生信息 App 同款交互。</p>
+    </div>
+    <div class="duo-card rv" style="transition-delay:.16s">
+      <img src="shots/s3.webp" alt="原生概览">
+      <h3>展开 · 模块仪表盘 <span class="chip">原生 LIST</span></h3>
+      <p>运营商、信号强度、SIM/eSIM 状态一屏尽览——原生 List 分组样式，深浅色自动适配。</p>
+    </div>
+    <div class="duo-card rv" style="transition-delay:.24s">
+      <img src="shots/s4.webp" alt="设置页">
+      <h3>外屏 · 单手模式 <span class="chip">COMPACT</span></h3>
+      <p>合上屏幕照样用：通话记录选项卡切换联系人、拨号键盘自适应窄屏、方向智能锁定不误转。</p>
+    </div>
+  </div>
+</section>
+
+<section id="chain">
+  <div class="sec-head rv">
+    <h2>三端架构，一条链路</h2>
+    <p>iPhone ↔ Go 代理 ↔ macOS 主服务 ↔ USB ↔ DJI 4G 模块。异地组网（Tailscale / 小火箭）下照样打通。</p>
+  </div>
+  <div class="chain rv">
+    <div class="node"><i>📱</i><b>iPhone App</b><small>SwiftUI · CallKit · PushKit</small></div>
+    <div class="flow"></div>
+    <div class="node"><i>🛡️</i><b>Go 代理</b><small>:7576 · WebSocket 信令 + Opus</small></div>
+    <div class="flow"></div>
+    <div class="node"><i>💻</i><b>Mac 主服务</b><small>:7575 · AT 指令 · UAC 语音桥</small></div>
+    <div class="flow"></div>
+    <div class="node"><i>📡</i><b>DJI 4G 模块</b><small>QDC507 · USB 直连</small></div>
+  </div>
+</section>
+
+<section id="feat">
+  <div class="sec-head rv">
+    <h2>一台模块，四种能力</h2>
+    <p>原生物件，原声体验。每一项都长在 iOS 系统里，不是网页模拟。</p>
+  </div>
+  <div class="feat-grid">
+    <div class="feat rv"><i>📞</i><h3>系统级通话</h3><p>CallKit 全屏来电、PushKit VoIP 推送——App 被杀也能弹系统来电界面，锁屏接听、通讯录、DTMF 拨号盘一个不少。</p></div>
+    <div class="feat rv" style="transition-delay:.08s"><i>💬</i><h3>真·收发短信</h3><p>会话列表、未读蓝点、侧滑标未读、验证码一键复制。长短信自动分片，PDU 编解码全自研。</p></div>
+    <div class="feat rv" style="transition-delay:.16s"><i>🛰️</i><h3>4G + GPS + eSIM</h3><p>模块状态仪表盘、信号强度、基站信息；GNSS 定位；eSIM Profile 切换管理，AT 调试台内置。</p></div>
+    <div class="feat rv"><i>📱</i><h3>折叠屏原生适配</h3><p>iPhone Duo 内屏侧边栏、拨号双栏、外屏选项卡——四形态全覆盖，官方 size class 判定。</p></div>
+    <div class="feat rv" style="transition-delay:.08s"><i>🎙️</i><h3>USB 语音桥</h3><p>自研 UAC 语音路由：模块内核态 PCM 桥接，Opus 编码，WebSocket 实时传输——通话音质与延迟兼得。</p></div>
+    <div class="feat rv" style="transition-delay:.16s"><i>🧪</i><h3>演示模式</h3><p>没有硬件？打开演示模式，全部界面走模拟数据——评审、截图、体验，零硬件门槛。</p></div>
+  </div>
+</section>
+
+<section id="quick">
+  <div class="sec-head rv">
+    <h2>三步跑起来</h2>
+    <p>需要：Mac + DJI 第一代 4G 模块（原厂或百旺 QDC507）+ 插一张实体 SIM。</p>
+  </div>
+  <div class="steps">
+    <div class="step rv"><div class="step-n">1</div><div><b>Mac 起服务</b><p>下载 DMG 全家桶，拖进「应用程序」，双击 <code style="color:var(--acc)">启动.command</code>——主服务、代理、菜单栏 App 一键全起。</p></div></div>
+    <div class="step rv"><div class="step-n">2</div><div><b>iPhone 装 App</b><p>克隆仓库，Xcode 打开 <code style="color:var(--acc)">ios/DJOneHub.xcodeproj</code> 选真机 Run。「更多 → 服务器连接」填 Mac 地址。</p></div></div>
+    <div class="step rv"><div class="step-n">3</div><div><b>插卡开打</b><p>模块插 SIM、USB 连 Mac。概览页看到运营商和信号，拨 10086，CallKit 来电界面全屏弹出——你的无人机模块成了手机。</p></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="cta-box rv">
+    <h2>把 4G 模块，装回口袋。</h2>
+    <p>开源 · MIT 协议 · 欢迎 PR 与 Star。给你的 DJI 模块第二次生命。</p>
+    <a class="btn btn-p" href="https://github.com/zyp846302291-creator/DJOneHub-iOS" target="_blank" style="position:relative">前往 GitHub ⭐</a>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  DJOneHub · 非官方开源项目，与大疆创新（DJI）无关联 · 模块固件零修改<br>
+  <a href="https://github.com/zyp846302291-creator/DJOneHub-iOS" target="_blank">GitHub</a> · v3.1 (Build 34) · 2026
+</footer>
+
+<script>
+/* 粒子背景 */
+const cv = document.getElementById('bg-canvas'), ctx = cv.getContext('2d');
+let W, H, ps = [], mouse = {x:-999, y:-999};
+function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+const COLORS = ['53,240,168','58,160,255','177,107,255'];
+for (let i = 0; i < 70; i++) ps.push({
+  x: Math.random()*2000, y: Math.random()*1200,
+  vx: (Math.random()-.5)*.35, vy: (Math.random()-.5)*.35,
+  r: Math.random()*1.8+.6, c: COLORS[i%3], a: Math.random()*.5+.2
+});
+function tick(){
+  ctx.clearRect(0,0,W,H);
+  for (const p of ps) {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x<0||p.x>W) p.vx*=-1; if (p.y<0||p.y>H) p.vy*=-1;
+    const dx = p.x-mouse.x, dy = p.y-mouse.y, d = Math.hypot(dx,dy);
+    if (d < 130) { ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(mouse.x,mouse.y);
+      ctx.strokeStyle = `rgba(${p.c},${.25*(1-d/130)})`; ctx.lineWidth=.7; ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fillStyle = `rgba(${p.c},${p.a})`; ctx.fill();
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* Hero 截图轮播 */
+const heroImg = document.getElementById('heroImg'), heroCap = document.getElementById('heroCap');
+const dots = [...document.querySelectorAll('#heroDots i')];
+let cur = 0, timer;
+function go(i){
+  cur = i;
+  dots.forEach((d,k)=>d.classList.toggle('on',k===i));
+  heroImg.style.opacity = 0;
+  setTimeout(()=>{ heroImg.src = dots[i].dataset.img; heroCap.innerHTML = dots[i].dataset.cap; heroImg.style.opacity = 1; }, 240);
+}
+heroImg.style.transition = 'opacity .3s';
+dots.forEach((d,i)=>d.onclick = ()=>{ go(i); clearInterval(timer); auto(); });
+function auto(){ timer = setInterval(()=> go((cur+1)%dots.length), 3600); }
+auto();
+
+/* 数字滚动 */
+document.querySelectorAll('[data-count]').forEach(el=>{
+  const t = +el.dataset.count; let n = 0;
+  const iv = setInterval(()=>{ n++; el.textContent = n; if(n>=t) clearInterval(iv); }, 260);
+});
+
+/* 卡片光斑跟随 */
+document.querySelectorAll('.feat, .duo-card').forEach(card=>{
+  card.addEventListener('mousemove', e=>{
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', (e.clientX-r.left)+'px');
+    card.style.setProperty('--my', (e.clientY-r.top)+'px');
+  });
+});
+
+/* 滚动 reveal */
+const io = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target); } });
+},{threshold:.16});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

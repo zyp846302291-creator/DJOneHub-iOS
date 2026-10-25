@@ -97,6 +97,10 @@ struct OverviewView: View {
         .background(Color.appBackground)
         .refreshable { await loadStatus() }
         .onAppear { Task { await loadStatus() } }
+        // WebSocket 重连成功后自动重拉状态（修复：断线重连后运营商等信息不刷新）
+        .onReceive(NotificationCenter.default.publisher(for: .djonehubSignalingDidConnect)) { _ in
+            Task { await loadStatus() }
+        }
     }
 
     // MARK: - Status Card

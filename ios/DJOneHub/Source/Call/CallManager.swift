@@ -3,6 +3,11 @@ import Combine
 import AVFoundation
 import UIKit
 
+extension Notification.Name {
+    /// WebSocket 信令重连成功（UI 页面监听后自动重拉状态）
+    static let djonehubSignalingDidConnect = Notification.Name("djonehubSignalingDidConnect")
+}
+
 /// Bridges SignalingClient (WebSocket ↔ Mac) and CallKitManager (iOS system call UI).
 /// This is the central coordinator for all call operations.
 class CallManager: ObservableObject {
@@ -200,6 +205,9 @@ extension CallManager: SignalingClientDelegate {
             self.isConnected = true
             self.hasConnectedOnce = true
             self.lastError = nil
+            // WebSocket 重连成功 → 广播通知：概览等页面据此自动重拉状态
+            // （修复：App 断线重连后状态页不刷新运营商数据的 bug）
+            NotificationCenter.default.post(name: .djonehubSignalingDidConnect, object: nil)
             // Reconnection: if CallKit session is still active, just re-send audio/start
             if self.activeCall != nil && self.audioReceiver.isRunning {
                 print("[CallManager] reconnected with active call, re-sending audio/start")

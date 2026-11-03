@@ -131,28 +131,20 @@ struct MoreView: View {
             }
         }
         .navigationTitle("更多")
-        // 仅在键盘弹出时启用"点空白收键盘"手势——
-        // 常驻 onTapGesture 会吞掉 NavigationLink 行的单击（导致要长按才能进）
-        .modifier(KeyboardDismissOnDemand(focused: $kbField))
-    }
-
-    /// 输入框焦点（跟踪键盘是否弹出）
-    private enum KBField: Hashable { case host, port }
-    @FocusState private var kbField: KBField?
-
-    /// 键盘弹出时：点击任意处收键盘；键盘未弹出：无手势（不干扰行点击导航）
-    private struct KeyboardDismissOnDemand: ViewModifier {
-        @FocusState.Binding var focused: KBField?
-        func body(content: Content) -> some View {
-            if focused != nil {
-                content
-                    .onTapGesture { focused = nil }
-                    .simultaneousGesture(TapGesture().onEnded { focused = nil })
-            } else {
-                content
+        // 收键盘方案（iOS 原生，零手势拦截——不干扰 TextField 聚焦和行点击）：
+        // ① 滚动列表即收键盘 ② 键盘上方"完成"按钮（numberPad 无 return 键）
+        .scrollDismissesKeyboard(.immediately)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("完成") { kbField = nil }
             }
         }
     }
+
+    /// 输入框焦点（键盘工具条收起用）
+    private enum KBField: Hashable { case host, port }
+    @FocusState private var kbField: KBField?
 
     /// 收起系统键盘：让当前第一响应者辞职
     private func hideKeyboard() {

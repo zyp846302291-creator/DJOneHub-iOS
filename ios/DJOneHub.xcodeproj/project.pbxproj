@@ -20,15 +20,17 @@
 		7DE44258B72AD05B7C0182CF /* SignalingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF240C79D20E398740386E55 /* SignalingClient.swift */; };
 		847C00E0A43BAB4CDA231EEC /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D27F65A26CDF37C76C6D9E4A /* ContactsView.swift */; };
 		AA0E4D66C879243DB11BF7CE /* BackgroundKeepAlive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9316B8F643FBF68BCD5FCBBB /* BackgroundKeepAlive.swift */; };
-		AA10B1C2D83E4F5A90000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10B1C2D83E4F5A90000002 /* AppDelegate.swift */; };
 		B1BC8E6CC85B751A051688E6 /* DJOneHubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C84B6B8D45569D717C34DDF /* DJOneHubApp.swift */; };
 		DC912FE7679B3CF1378309FD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A93FA0D7F5F0FFA11C73ACC0 /* Assets.xcassets */; };
 		E0FB4726FF8F461357F34947 /* PushKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA63BAFB29DEED98FC566336 /* PushKitManager.swift */; };
+		E1E4662585AA399DB058182C /* SMSNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29A7E278D35A4DD793ACE7A4 /* SMSNotifier.swift */; };
+		E771012E80D1CF5B88F5BCDB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2F8B439FA77843BDC225DC /* AppDelegate.swift */; };
 		F73185E32D7FC71AEF6C718E /* CallKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741D986D83E15BDD0BFBA7D9 /* CallKitManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		036F8184B3D5481B3E39CE2B /* AudioReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioReceiver.swift; sourceTree = "<group>"; };
+		29A7E278D35A4DD793ACE7A4 /* SMSNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSNotifier.swift; sourceTree = "<group>"; };
 		35C36336546325CD84E674FC /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		38049060F5A35836D2250265 /* SafeAudioTap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SafeAudioTap.h; sourceTree = "<group>"; };
 		3C84B6B8D45569D717C34DDF /* DJOneHubApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DJOneHubApp.swift; sourceTree = "<group>"; };
@@ -40,9 +42,9 @@
 		9316B8F643FBF68BCD5FCBBB /* BackgroundKeepAlive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundKeepAlive.swift; sourceTree = "<group>"; };
 		A750E5D31CD9A8C685C67C50 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A93FA0D7F5F0FFA11C73ACC0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		AA10B1C2D83E4F5A90000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		B145446D53E8C0C0B9415EA7 /* DJOneHub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DJOneHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B145446D53E8C0C0B9415EA7 /* DJOneHub.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DJOneHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B57CB252854FE6EEC179E019 /* SafeAudioTap.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SafeAudioTap.m; sourceTree = "<group>"; };
+		CE2F8B439FA77843BDC225DC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D13EA7BD9A36828C0488EA2E /* SMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSView.swift; sourceTree = "<group>"; };
 		D27F65A26CDF37C76C6D9E4A /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
 		D3FE507CABFC65269D7BF6DE /* CallManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallManager.swift; sourceTree = "<group>"; };
@@ -87,6 +89,7 @@
 			children = (
 				741D986D83E15BDD0BFBA7D9 /* CallKitManager.swift */,
 				D3FE507CABFC65269D7BF6DE /* CallManager.swift */,
+				29A7E278D35A4DD793ACE7A4 /* SMSNotifier.swift */,
 			);
 			path = Call;
 			sourceTree = "<group>";
@@ -94,9 +97,9 @@
 		5872E47515FF5D1A8B9A9EE0 /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				CE2F8B439FA77843BDC225DC /* AppDelegate.swift */,
 				44F7FE9B0529326B1F9D42A6 /* ContactManager.swift */,
 				3C84B6B8D45569D717C34DDF /* DJOneHubApp.swift */,
-				AA10B1C2D83E4F5A90000002 /* AppDelegate.swift */,
 				FAC576AF18559FD53D456307 /* Audio */,
 				4D2A58C976AD82C16FB4D6FB /* Call */,
 				252C22C40A15D2D81876086D /* Network */,
@@ -173,9 +176,10 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2720;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					FE924BF63EBC4A04BC145B81 = {
+						DevelopmentTeam = 66LH6ZAB6R;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -217,6 +221,7 @@
 			files = (
 				6BF018DA67BE349F7B4E2E47 /* APIClient.swift in Sources */,
 				04DA8A40990EEE815F8B1219 /* AdaptiveColors.swift in Sources */,
+				E771012E80D1CF5B88F5BCDB /* AppDelegate.swift in Sources */,
 				170AD34A90ABEDC570D78F52 /* AudioReceiver.swift in Sources */,
 				AA0E4D66C879243DB11BF7CE /* BackgroundKeepAlive.swift in Sources */,
 				F73185E32D7FC71AEF6C718E /* CallKitManager.swift in Sources */,
@@ -225,10 +230,10 @@
 				847C00E0A43BAB4CDA231EEC /* ContactsView.swift in Sources */,
 				60025B73FF4DD1CD330AEBE2 /* ContentView.swift in Sources */,
 				B1BC8E6CC85B751A051688E6 /* DJOneHubApp.swift in Sources */,
-				AA10B1C2D83E4F5A90000001 /* AppDelegate.swift in Sources */,
 				48864EB764216543D326BC70 /* MoreView.swift in Sources */,
 				2E8D79D67DB95C3274529418 /* OverviewView.swift in Sources */,
 				E0FB4726FF8F461357F34947 /* PushKitManager.swift in Sources */,
+				E1E4662585AA399DB058182C /* SMSNotifier.swift in Sources */,
 				2B2A01FCA1C578961CB76A1F /* SMSView.swift in Sources */,
 				597AD23434039ABEF0BAF5A6 /* SafeAudioTap.m in Sources */,
 				7DE44258B72AD05B7C0182CF /* SignalingClient.swift in Sources */,
@@ -271,14 +276,12 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Apple Development: zyp846302291@163.com (K6Y8W7SDM7)";
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 66LH6ZAB6R;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -294,7 +297,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.djonehub.remote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
@@ -307,8 +309,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 66LH6ZAB6R;
 				INFOPLIST_FILE = DJOneHub/Resources/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -325,8 +327,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 66LH6ZAB6R;
 				INFOPLIST_FILE = DJOneHub/Resources/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -371,14 +373,12 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Apple Development: zyp846302291@163.com (K6Y8W7SDM7)";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 66LH6ZAB6R;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -401,7 +401,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.djonehub.remote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;

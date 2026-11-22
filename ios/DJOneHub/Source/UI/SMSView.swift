@@ -16,7 +16,14 @@ struct SMSView: View {
     @State private var showClearAlert = false
     @State private var deleteTarget: SMSConversation?
     @State private var readConversations: [String: String] = [:] // number -> lastReadTimestamp
+    /// 已发送短信（只存手机本地，不上后端）。timestamp -> 发送失败
+    @State private var outgoing: [SMSMessage] = []
+    @State private var failedOutgoing: Set<String> = []
+    @State private var isSending = false
     @FocusState private var focusedField: Field?
+
+    private static let outgoingKey = "smsOutgoingMessages"
+    private static let failedKey = "smsOutgoingFailed"
 
     enum Field: Hashable {
         case phone, message, reply
@@ -49,6 +56,14 @@ struct SMSView: View {
         .onTapGesture { focusedField = nil }
         .onAppear {
             loadReadStatus()
+            // 先读本机的已发送记录再拉收件箱：收件箱没回来（或失败）时，只含已发送的会话也要能显示
+            loadOutgoing()
+            buildConversations()
+            Task { await loadSMS() }
+        }
+        // 短信页开着时来了新短信：直接把收件箱刷新，不用等用户下拉
+        // （本地通知由 ContentView 负责，这里只管页面数据）
+        .onReceive(NotificationCenter.default.publisher(for: .djOneHubSMSReceived)) { _ in
             Task { await loadSMS() }
         }
         .refreshable { await loadSMS() }
@@ -161,12 +176,12 @@ struct SMSView: View {
                     Button {
                         Task {
                             await sendSMS()
-                            // 发送成功后自动关闭
+                            // 发送成功后自动关闭。
+                            // 回复由 sendSMS 内部启动的后台轮询带回，这里不用再刷收件箱。
                             if sendStatus?.contains("成功") == true {
                                 try? await Task.sleep(nanoseconds: 600_000_000)
                                 showCompose = false
                                 sendStatus = nil
-                                await loadSMS()
                             }
                         }
                     } label: {
@@ -241,8 +256,14 @@ struct SMSView: View {
         }
     }
 
+    /// 会话是否有未读：最后一条「收到的」消息晚于已读时间
+    private func isUnread(_ conv: SMSConversation) -> Bool {
+        guard let lastIncoming = conv.messages.last(where: { $0.direction == .incoming }) else { return false }
+        return (readConversations[conv.number] ?? "") < lastIncoming.timestamp
+    }
+
     private func conversationRow(_ conv: SMSConversation) -> some View {
-        let isUnread = (readConversations[conv.number] ?? "") < conv.lastMessage.timestamp
+        let isUnread = self.isUnread(conv)
         return HStack(spacing: 12) {
             // 原生信息风格：未读行首蓝点
             Circle()
@@ -300,7 +321,7 @@ struct SMSView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    let isUnreadBadge = (readConversations[conv.number] ?? "") < conv.lastMessage.timestamp
+                    let isUnreadBadge = self.isUnread(conv)
                     if isUnreadBadge {
                         // 已由行首蓝点替代（原生信息风格），此处保留占位不影响布局
                         EmptyView()
@@ -399,17 +420,43 @@ struct SMSView: View {
     }
 
     private func messageBubble(_ msg: SMSMessage) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
+        let isOutgoing = msg.direction == .outgoing
+        let isFailed = isOutgoing && failedOutgoing.contains(msg.timestamp)
+        return HStack {
+            if isOutgoing { Spacer(minLength: 48) }
+            VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 4) {
                 Text(msg.content)
                     .font(.system(size: 15))
-                    .foregroundColor(.appPrimary)
+                    .foregroundColor(isOutgoing ? .white : .appPrimary)
                     .padding(10)
-                    .background(Color(.systemGray4))
+                    .background(isOutgoing ? (isFailed ? Color.red : Color.blue) : Color(.systemGray4))
                     .cornerRadius(12)
 
+                // 发送失败：原生信息的「未送达」红条 + 重发
+                if isFailed {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.red)
+                        Text("未送达")
+                            .font(.system(size: 12))
+                            .foregroundColor(.red)
+                        Button {
+                            sendPhone = msg.peer
+                            sendMessage = msg.content
+                            Task { await sendSMS() }
+                        } label: {
+                            Text("重发")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.red)
+                                .underline()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
                 // 验证码快捷复制（自动提取到验证码时显示）
-                if let code = extractVerificationCode(from: msg.content) {
+                if !isOutgoing, let code = extractVerificationCode(from: msg.content) {
                     Button {
                         UIPasteboard.general.string = code
                         copiedCode = code
@@ -437,7 +484,7 @@ struct SMSView: View {
                     .font(.system(size: 11))
                     .foregroundColor(.appSecondary)
             }
-            Spacer()
+            if !isOutgoing { Spacer(minLength: 48) }
         }
     }
 
@@ -517,15 +564,19 @@ struct SMSView: View {
     }
 
     private func markAsRead(_ conv: SMSConversation) {
-        readConversations[conv.number] = conv.lastMessage.timestamp
+        // 只记最后一条「收到的」时间：自己发出的消息时间更晚，记它会让之后的未读判断失准
+        guard let lastIncoming = conv.messages.last(where: { $0.direction == .incoming }) else { return }
+        readConversations[conv.number] = lastIncoming.timestamp
         UserDefaults.standard.set(readConversations, forKey: "smsReadStatus")
         updateUnreadCount()
     }
 
     /// 计算未读会话数（供 tab 角标使用）
+    /// 只看「收到的」消息：自己发出的不算未读
     private func updateUnreadCount() {
-        unreadSMS = conversations.filter {
-            (readConversations[$0.number] ?? "") < $0.lastMessage.timestamp
+        unreadSMS = conversations.filter { conv in
+            guard let lastIncoming = conv.messages.last(where: { $0.direction == .incoming }) else { return false }
+            return (readConversations[conv.number] ?? "") < lastIncoming.timestamp
         }.count
     }
 
@@ -543,26 +594,100 @@ struct SMSView: View {
     }
 
     private func sendSMS() async {
-        guard !sendPhone.isEmpty, !sendMessage.isEmpty else { return }
+        guard !sendPhone.isEmpty, !sendMessage.isEmpty, !isSending else { return }
+        let phone = sendPhone.trimmingCharacters(in: .whitespaces)
+        let text = sendMessage
+        let stamp = Self.outgoingTimestamp()
+        let entry = SMSMessage(sender: phone, content: text, timestamp: stamp, direction: .outgoing)
+
+        // 原生信息的行为：点发送气泡立刻出现，不等后端
+        isSending = true
+        sendMessage = ""
+        outgoing.append(entry)
+        persistOutgoing()
+        buildConversations()
+        sendStatus = nil
+
         do {
-            let result = try await api.sendSMS(phone: sendPhone, message: sendMessage)
+            let result = try await api.sendSMS(phone: phone, message: text)
             if result.sent == true {
                 sendStatus = "发送成功（\(result.segments ?? 1) 条）"
-                sendMessage = ""
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                await loadSMS()
+                // 后端收回复有延迟（实测 6~20 秒），发完后短时间内反复拉收件箱把回复带回来。
+                // 不 await：让轮询在后台跑，否则 isSending 会卡住 40 秒，期间发不了下一条。
+                let baseline = messages.map(\.timestamp).max() ?? ""
+                Task { await pollForReply(afterTimestamp: baseline) }
             } else {
-                sendStatus = result.error ?? "发送失败"
+                markOutgoingFailed(entry, reason: result.error ?? "发送失败")
             }
         } catch {
-            sendStatus = "发送失败: \(error.localizedDescription)"
+            markOutgoingFailed(entry, reason: error.localizedDescription)
         }
+        isSending = false
+    }
+
+    /// 发送成功后轮询收件箱，直到出现比发送时更新的消息或超时。
+    /// 后端没有「新短信」推送，App 只在打开页面/下拉时刷新，所以不轮询的话回复要手动下拉才看得到。
+    /// 用「最新时间戳」而不是「条数」判断：收件箱被清空或条数凑巧相同时，条数判断会失准。
+    private func pollForReply(afterTimestamp baseline: String) async {
+        let pollInterval: UInt64 = 3_000_000_000
+        let maxAttempts = 13   // 约 40 秒
+        for _ in 0..<maxAttempts {
+            try? await Task.sleep(nanoseconds: pollInterval)
+            guard !Task.isCancelled else { return }
+            // 静默拉取：不走 loadSMS()，否则每 3 秒就会闪一次加载动画
+            guard let fresh = try? await api.fetchSMS() else { continue }
+            messages = fresh
+            buildConversations()
+            if let newest = fresh.map(\.timestamp).max(), newest > baseline { return }
+        }
+    }
+
+    private func markOutgoingFailed(_ entry: SMSMessage, reason: String) {
+        failedOutgoing.insert(entry.timestamp)
+        persistOutgoing()
+        sendStatus = "发送失败：\(reason)"
+    }
+
+    // MARK: - Outgoing（已发送短信，仅存本机）
+
+    /// 时间戳必须和后端收件箱用同一种格式（2026-11-22T22:41:45+08:00）。
+    /// 会话排序和未读判断都是按字符串比较的：如果这里用默认的 UTC（…Z），
+    /// 同一会话里发出的消息永远会排在收到的消息前面。
+    private static func outgoingTimestamp() -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        formatter.timeZone = TimeZone(secondsFromGMT: TimeZone.current.secondsFromGMT())
+        return formatter.string(from: Date())
+    }
+
+    private func loadOutgoing() {
+        if let data = UserDefaults.standard.data(forKey: Self.outgoingKey),
+           let saved = try? JSONDecoder().decode([SMSMessage].self, from: data) {
+            outgoing = saved
+        }
+        failedOutgoing = Set(UserDefaults.standard.stringArray(forKey: Self.failedKey) ?? [])
+    }
+
+    private func persistOutgoing() {
+        if let data = try? JSONEncoder().encode(outgoing) {
+            UserDefaults.standard.set(data, forKey: Self.outgoingKey)
+        }
+        UserDefaults.standard.set(Array(failedOutgoing), forKey: Self.failedKey)
+    }
+
+    /// 清空全部短信时，本机的已发送记录一并清掉（与原生信息「删除全部」一致）
+    private func clearOutgoing() {
+        outgoing = []
+        failedOutgoing = []
+        persistOutgoing()
     }
 
     private func clearSMS() async {
         do {
             _ = try await api.clearSMS()
             messages = []
+            // 本机的已发送记录一并清掉（与原生信息「删除全部」一致）
+            clearOutgoing()
             conversations = []
         } catch {
             print("[SMS] clear error: \(error)")
@@ -570,15 +695,18 @@ struct SMSView: View {
     }
 
     private func deleteConversation(_ conv: SMSConversation) {
-        messages.removeAll { $0.sender == conv.number }
+        messages.removeAll { $0.peer == conv.number }
+        outgoing.removeAll { $0.peer == conv.number }
+        persistOutgoing()
         buildConversations()
         selectedConversation = nil
     }
 
     private func buildConversations() {
+        // 按对方号码归组：收到的按发件人，发出的按收件人 → 同一号码进出都在一个会话里
         var convMap: [String: [SMSMessage]] = [:]
-        for msg in messages {
-            convMap[msg.sender, default: []].append(msg)
+        for msg in messages + outgoing {
+            convMap[msg.peer, default: []].append(msg)
         }
         conversations = convMap.map { key, msgs in
             SMSConversation(number: key, messages: msgs.sorted { $0.timestamp < $1.timestamp })

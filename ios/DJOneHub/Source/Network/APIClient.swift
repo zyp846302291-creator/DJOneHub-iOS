@@ -34,11 +34,44 @@ struct ModuleStatus: Codable {
     }
 }
 
+/// 短信方向。后端 /api/sms 只返回收到的短信（不带 direction），
+/// 所以 direction 缺省为 nil 时按「收到」处理，保证旧数据兼容。
+enum SMSDirection: String, Codable {
+    case incoming
+    case outgoing
+
+    /// 后端 JSON 里没有 direction 字段 → 默认收到
+    static func decode(_ raw: String?) -> SMSDirection {
+        raw.flatMap(SMSDirection.init(rawValue:)) ?? .incoming
+    }
+}
+
 struct SMSMessage: Codable, Identifiable {
-    var id: String { "\(sender)_\(timestamp)_\(content.prefix(20))" }
+    // 带上方向：同一条内容「发出」和「收到」不会撞 id
+    var id: String { "\(direction.rawValue)_\(peer)_\(timestamp)_\(content.prefix(20))" }
+
+    /// 收到：发件人；发出：收件人
     let sender: String
     let content: String
     let timestamp: String
+    let directionRaw: String?
+
+    var direction: SMSDirection { SMSDirection.decode(directionRaw) }
+
+    /// 这个会话的「对方号码」——收到时是发件人，发出时是收件人
+    var peer: String { sender }
+
+    enum CodingKeys: String, CodingKey {
+        case sender, content, timestamp
+        case directionRaw = "direction"
+    }
+
+    init(sender: String, content: String, timestamp: String, direction: SMSDirection = .incoming) {
+        self.sender = sender
+        self.content = content
+        self.timestamp = timestamp
+        self.directionRaw = direction.rawValue
+    }
 }
 
 struct SMSConversation: Identifiable {

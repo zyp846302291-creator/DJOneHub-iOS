@@ -54,6 +54,15 @@ protocol SignalingClientDelegate: AnyObject {
     func signalingDidReceiveIncomingCall(_ client: SignalingClient, call: CallInfo)
 }
 
+// MARK: - 短信实时通知
+
+/// 代理在有新短信时通过 WebSocket 推 `sms_received`，这里转成系统通知广播出去。
+/// 用 NotificationCenter 而不是加到 SignalingClientDelegate：短信和通话是两件事，
+/// 不该让只管通话的 CallManager 被迫实现短信回调。
+extension Notification.Name {
+    static let djOneHubSMSReceived = Notification.Name("DJOneHubSMSReceived")
+}
+
 // MARK: - WebSocket Signaling Client
 
 class SignalingClient: NSObject {
@@ -273,6 +282,18 @@ class SignalingClient: NSObject {
                let errorDict = try? JSONSerialization.jsonObject(with: payloadData) as? [String: String],
                let detail = errorDict["error"] {
                 delegate?.signaling(self, didReceiveError: detail, action: errorDict["action"])
+            }
+
+        case "sms_received":
+            // 代理汇总推送：payload 是新到的短信数组，字段与 /api/sms 一致
+            if let payloadData = payloadData,
+               let incoming = try? JSONDecoder().decode([SMSMessage].self, from: payloadData),
+               !incoming.isEmpty {
+                NotificationCenter.default.post(
+                    name: .djOneHubSMSReceived,
+                    object: self,
+                    userInfo: ["messages": incoming]
+                )
             }
 
         case "pong", "audio/started", "audio/stopped":

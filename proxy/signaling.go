@@ -30,12 +30,12 @@ type CallStatePush struct {
 }
 
 type CallInfo struct {
-	ID        string  `json:"id"`
-	Direction string  `json:"direction"`
-	State     string  `json:"state"`
-	Number    string  `json:"number,omitempty"`
-	StartedAt string  `json:"started_at,omitempty"`
-	Missed    bool    `json:"missed,omitempty"`
+	ID        string `json:"id"`
+	Direction string `json:"direction"`
+	State     string `json:"state"`
+	Number    string `json:"number,omitempty"`
+	StartedAt string `json:"started_at,omitempty"`
+	Missed    bool   `json:"missed,omitempty"`
 }
 
 type AudioState struct {
@@ -43,21 +43,30 @@ type AudioState struct {
 }
 
 type ModuleInfo struct {
-	Operator  string `json:"operator"`
-	Signal    int    `json:"signal_dbm"`
-	Network   string `json:"network_mode"`
-	SIMReady  bool   `json:"sim_inserted"`
+	Operator string `json:"operator"`
+	Signal   int    `json:"signal_dbm"`
+	Network  string `json:"network_mode"`
+	SIMReady bool   `json:"sim_inserted"`
 }
 
 type HubSignaling struct {
-	upstream   string
-	upgrader   websocket.Upgrader
-	clients    map[*wsClient]bool
-	mu         sync.RWMutex
-	pollDone   chan struct{}
-	audio      *AudioBridge
-	micBridge  *MicBridge
-	pushRelay  *PushRelay
+	upstream  string
+	upgrader  websocket.Upgrader
+	clients   map[*wsClient]bool
+	mu        sync.RWMutex
+	pollDone  chan struct{}
+	audio     *AudioBridge
+	micBridge *MicBridge
+	pushRelay *PushRelay
+	// lastSMSTimestamp 是已通知过 iPhone 的最新收件时间；为空表示还没初始化
+	lastSMSTimestamp string
+}
+
+// SMSInfo 是推给 iPhone 的单条收到的短信（字段与后端 /api/sms 一致）
+type SMSInfo struct {
+	Sender    string `json:"sender"`
+	Content   string `json:"content"`
+	Timestamp string `json:"timestamp"`
 }
 
 type wsClient struct {
@@ -72,9 +81,9 @@ type wsClient struct {
 
 func NewHubSignaling(upstream string) *HubSignaling {
 	h := &HubSignaling{
-		upstream: upstream,
-		clients:  make(map[*wsClient]bool),
-		audio:    NewAudioBridge(5758, 5759), // Mac listens on 5758, iPhone on 5759
+		upstream:  upstream,
+		clients:   make(map[*wsClient]bool),
+		audio:     NewAudioBridge(5758, 5759), // Mac listens on 5758, iPhone on 5759
 		micBridge: NewMicBridge(),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
@@ -91,9 +100,9 @@ func (h *HubSignaling) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &wsClient{
-		conn: conn,
-		send: make(chan []byte, 64),
-		hub:  h,
+		conn:     conn,
+		send:     make(chan []byte, 64),
+		hub:      h,
 		remoteIP: hostFromRemoteAddr(r.RemoteAddr),
 		stopCh:   make(chan struct{}),
 	}
@@ -450,6 +459,15 @@ func (h *HubSignaling) broadcastState() {
 		h.mu.RUnlock()
 		return
 	}
+	h.mu.RUnlock()
+
+	h.pollAndBroadcastSMS()
+
+	h.mu.RLock()
+	if len(h.clients) == 0 {
+		h.mu.RUnlock()
+		return
+	}
 
 	// Fetch state once
 	httpClient := &http.Client{Timeout: 3 * time.Second}
@@ -520,6 +538,70 @@ func (h *HubSignaling) broadcastState() {
 	// Reset push dedup when call ends
 	if h.pushRelay != nil && state.Active == nil {
 		h.pushRelay.ResetDedup()
+	}
+}
+
+// pollAndBroadcastSMS 检查后端收件箱，把新到的短信推给所有连着的 iPhone。
+//
+// 后端本身没有「新短信」事件，这里只能按时间戳比对：
+//   - 代理启动后第一次只记录基线、不推送，否则会把历史短信当成新短信全部弹出；
+//   - 后端不可达时不更新基线，避免恢复后把旧短信重推一遍；
+//   - 收件箱被清空后基线跟着下降，否则之后的新短信会因「不比基线新」被漏掉。
+//
+// 已知局限：后端时间戳只到秒。若清空后同一秒内又收到新短信，这条会被漏掉。
+func (h *HubSignaling) pollAndBroadcastSMS() {
+	httpClient := &http.Client{Timeout: 3 * time.Second}
+	resp, err := httpClient.Get(h.upstream + "/api/sms")
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return
+	}
+	var inbox []SMSInfo
+	if err := json.Unmarshal(body, &inbox); err != nil {
+		return
+	}
+
+	h.mu.Lock()
+	baseline := h.lastSMSTimestamp
+	fresh := h.lastSMSTimestamp == ""
+	var latest string
+	var newMessages []SMSInfo
+	for _, m := range inbox {
+		if m.Timestamp > latest {
+			latest = m.Timestamp
+		}
+		if fresh || m.Timestamp > baseline {
+			newMessages = append(newMessages, m)
+		}
+	}
+	if latest != "" || len(inbox) == 0 {
+		h.lastSMSTimestamp = latest
+	}
+	clients := make([]*wsClient, 0, len(h.clients))
+	for c := range h.clients {
+		clients = append(clients, c)
+	}
+	h.mu.Unlock()
+
+	if fresh || len(newMessages) == 0 || len(clients) == 0 {
+		return
+	}
+
+	// 一次汇总推送，避免一条短信占满客户端的发送通道
+	payload, err := json.Marshal(newMessages)
+	if err != nil {
+		return
+	}
+	msg := SignalMessage{
+		Type:    "sms_received",
+		Payload: payload,
+	}
+	for _, c := range clients {
+		c.sendMessage(msg)
 	}
 }
 

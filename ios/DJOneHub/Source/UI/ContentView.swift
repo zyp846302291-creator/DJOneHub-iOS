@@ -112,6 +112,15 @@ struct ContentView: View {
             callManager.connect()
             contactManager.loadContacts()
         }
+        // 新短信：代理经 WebSocket 推 sms_received → SignalingClient 发系统通知 → 这里弹本地通知。
+        // 监听放在 ContentView（常驻）而不是 SMSView：短信页没打开时才是最需要提醒的时候。
+        .onReceive(NotificationCenter.default.publisher(for: .djOneHubSMSReceived)) { note in
+            guard demoMode == false,
+                  let incoming = note.userInfo?["messages"] as? [SMSMessage] else { return }
+            // 权限在真正有短信要提醒时才请求：冷启动就弹权限框体验差，也更容易被拒
+            SMSNotifier.shared.requestPermissionIfNeeded()
+            SMSNotifier.shared.notify(messages: incoming)
+        }
         // 全局全屏通话界面：无论停留在哪个 tab，通话期间都覆盖显示
         .overlay {
             if callManager.activeCall != nil {
